@@ -81,6 +81,8 @@ def create_razorpay_order(order):
         'receipt': receipt,
         'notes': {
             'flora_order_id': str(order.id),
+            'order_code': f'FLORA{order.id}',
+            'payment_note': f'FLORA{order.id}',
             'customer': f'{order.first_name} {order.last_name}'.strip(),
             'phone': (order.phone or '')[:20],
         },

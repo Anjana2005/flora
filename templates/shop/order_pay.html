@@ -32,6 +32,35 @@
         border-radius: 999px;
         margin: 0.5rem 0 1rem;
     }
+    .note-code-box {
+        background: #fff8e1;
+        border: 2px solid #ffc107;
+        border-radius: 14px;
+        padding: 0.85rem 1rem;
+        margin: 0.75rem 0 1rem;
+        text-align: left;
+    }
+    .note-code-box .label {
+        font-size: 0.8rem;
+        color: #6d4c00;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+    .note-code-box .code {
+        font-size: 1.45rem;
+        font-weight: 900;
+        color: #5A3F4A;
+        letter-spacing: 0.04em;
+        margin-top: 0.2rem;
+        word-break: break-all;
+    }
+    .note-code-box .hint-sm {
+        font-size: 0.82rem;
+        color: #666;
+        margin-top: 0.4rem;
+        line-height: 1.4;
+    }
     .btn-pay {
         display: block;
         width: 100%;
@@ -49,6 +78,20 @@
         box-shadow: 0 10px 22px rgba(232,122,150,0.3);
     }
     .btn-pay:disabled { opacity: 0.6; cursor: wait; }
+    .btn-secondary {
+        display: block;
+        width: 100%;
+        box-sizing: border-box;
+        margin: 0.55rem 0 0;
+        padding: 0.85rem 1rem;
+        border-radius: 14px;
+        font-weight: 800;
+        font-size: 0.95rem;
+        text-decoration: none;
+        color: #5A3F4A;
+        background: #fff;
+        border: 2px solid rgba(232,122,150,0.45);
+    }
     .hint { color: #666; font-size: 0.9rem; line-height: 1.5; margin-top: 0.85rem; text-align: left; }
     .note {
         background: #e3f2fd;
@@ -89,17 +132,38 @@
         padding: 0.25rem 0.55rem;
         border-radius: 999px;
     }
+    .scanner-section {
+        margin-top: 1.35rem;
+        padding-top: 1.15rem;
+        border-top: 1px dashed rgba(232,122,150,0.4);
+    }
+    .scanner-section h2 {
+        font-size: 1.05rem;
+        color: #5A3F4A;
+        margin: 0 0 0.65rem;
+    }
+    .qr-wrap {
+        display: inline-block;
+        background: #fff;
+        border-radius: 18px;
+        padding: 0.85rem;
+        border: 2px solid rgba(232,122,150,0.25);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+    }
+    .qr-wrap img {
+        width: 220px;
+        height: 220px;
+        display: block;
+    }
     .manual-box {
-        margin-top: 1.25rem;
-        padding-top: 1rem;
-        border-top: 1px dashed rgba(232,122,150,0.35);
+        margin-top: 0.85rem;
         text-align: left;
         font-size: 0.88rem;
         color: #666;
     }
     .manual-box code {
-        display: block;
-        margin: 0.35rem 0;
+        display: inline-block;
+        margin: 0.15rem 0;
         font-weight: 800;
         color: #5A3F4A;
         word-break: break-all;
@@ -113,6 +177,17 @@
         <h1>Secure payment</h1>
         <p>Order <strong>{{ order_ref }}</strong></p>
         <div class="pay-amount">₹{{ amount_str }}</div>
+
+        <!-- Default note code always shown — same as embedded in scanner -->
+        <div class="note-code-box">
+            <div class="label">Payment note code</div>
+            <div class="code" id="payment-note-code">{{ payment_note|default:order_ref }}</div>
+            <div class="hint-sm">
+                This code is <strong>already filled</strong> in the UPI scanner.
+                When you pay, remarks / note will show <strong>{{ payment_note|default:order_ref }}</strong>
+                so the shop can match your payment.
+            </div>
+        </div>
 
         {% if messages %}
             {% for message in messages %}
@@ -136,35 +211,47 @@
             <i class="fas fa-lock"></i> Pay ₹{{ amount_str }} securely
         </button>
         <p class="hint" id="pay-status">
-            Payment is confirmed only after the bank / UPI app succeeds.
-            Admin shows <strong>Paid: Yes</strong> only then — not by opening a link.
+            Preferred: Razorpay (Paid only after bank success).
+            Or use the UPI scanner below — note code is included by default.
         </p>
-        <div class="note">
-            <strong>Safe checkout:</strong> Powered by Razorpay.
-            Your card/UPI details stay with the payment provider — not stored on this shop website.
-        </div>
         {% else %}
         <div class="warn">
-            <strong>Secure gateway not active yet.</strong><br>
-            Add Razorpay keys on the server so customers can pay with verified UPI/cards.
-            Until then, pay manually to shop UPI and ask the shop to mark Paid in admin after checking the bank app.
-            {% if rz_error %}<br><br><small>Details: {{ rz_error }}</small>{% endif %}
-        </div>
-        <div class="manual-box">
-            <strong>Shop UPI (manual)</strong>
-            <code>{{ shop_upi_id }}</code>
-            Amount: <strong>₹{{ amount_str }}</strong> · Ref: {{ order_ref }}
-            <p style="margin:0.6rem 0 0;">After you pay, WhatsApp the shop with this order number. Admin will confirm Paid after checking money.</p>
-            {% if upi_link %}
-            <a class="btn-pay" style="text-align:center;margin-top:0.85rem;" href="{{ upi_link }}">Open UPI app</a>
-            {% endif %}
-            {% if qr_url %}
-            <div style="text-align:center;margin-top:1rem;">
-                <img src="{{ qr_url }}" alt="UPI QR" width="200" height="200" style="border-radius:12px;">
-            </div>
-            {% endif %}
+            <strong>Secure gateway not active yet</strong> (add Razorpay keys on server).
+            Use the UPI scanner below — amount and note code are pre-filled.
+            {% if rz_error %}<br><br><small>{{ rz_error }}</small>{% endif %}
         </div>
         {% endif %}
+
+        <!-- Default UPI scanner with note code embedded -->
+        <div class="scanner-section">
+            <h2><i class="fas fa-qrcode"></i> UPI scanner (note included)</h2>
+            <p class="hint" style="margin-top:0;text-align:center;">
+                Scan with GPay / PhonePe — amount <strong>₹{{ amount_str }}</strong>
+                and note <strong>{{ payment_note|default:order_ref }}</strong> are set automatically.
+            </p>
+            {% if qr_url %}
+            <div class="qr-wrap">
+                <img src="{{ qr_url }}" alt="UPI QR {{ order_ref }} note {{ payment_note|default:order_ref }}">
+            </div>
+            {% endif %}
+            <div class="manual-box">
+                <div>Shop UPI: <code>{{ shop_upi_id }}</code></div>
+                <div>Amount: <code>₹{{ amount_str }}</code></div>
+                <div>Note / remarks: <code id="copy-note">{{ payment_note|default:order_ref }}</code></div>
+                <div style="margin-top:0.25rem;font-size:0.8rem;">Ref: <code>{{ payment_tr|default:order_ref }}</code></div>
+            </div>
+            {% if upi_link %}
+            <a class="btn-secondary" href="{{ upi_link }}">Open UPI app with note {{ payment_note|default:order_ref }}</a>
+            {% endif %}
+            <button type="button" class="btn-secondary" id="copy-note-btn" style="cursor:pointer;width:100%;font-family:inherit;">
+                Copy note code
+            </button>
+        </div>
+
+        <div class="note">
+            <strong>How to match payment:</strong> In your bank / UPI history the remark should include
+            <strong>{{ payment_note|default:order_ref }}</strong>. Admin uses this code for the order.
+        </div>
 
         <ul class="items">
             {% for item in items %}
@@ -177,6 +264,25 @@
         </ul>
     </div>
 </div>
+
+<script>
+(function () {
+    var btn = document.getElementById('copy-note-btn');
+    var code = (document.getElementById('copy-note') || {}).textContent || '{{ payment_note|default:order_ref|escapejs }}';
+    code = (code || '').trim();
+    if (btn && code) {
+        btn.addEventListener('click', function () {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(code).then(function () {
+                    btn.textContent = 'Note copied: ' + code;
+                });
+            } else {
+                prompt('Copy note code:', code);
+            }
+        });
+    }
+})();
+</script>
 
 {% if secure_payments %}
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
@@ -193,6 +299,7 @@
     var customerName = "{{ order.first_name|escapejs }} {{ order.last_name|escapejs }}".trim();
     var customerEmail = "{{ order.email|escapejs }}";
     var customerPhone = "{{ order.phone|escapejs }}";
+    var noteCode = "{{ payment_note|default:order_ref|escapejs }}";
 
     function setStatus(msg, isErr) {
         if (!statusEl) return;
@@ -229,7 +336,7 @@
             if (btn) btn.disabled = false;
         })
         .catch(function () {
-            setStatus('Network error while verifying. If money was debited, contact the shop with order {{ order_ref }}.', true);
+            setStatus('Network error while verifying. Contact shop with note ' + noteCode + '.', true);
             if (btn) btn.disabled = false;
         });
     }
@@ -244,8 +351,12 @@
             amount: amount,
             currency: 'INR',
             name: 'Flora Shop Thrissur',
-            description: 'Order {{ order_ref|escapejs }}',
+            description: 'Order ' + noteCode,
             order_id: orderId,
+            notes: {
+                order_code: noteCode,
+                payment_note: noteCode
+            },
             prefill: {
                 name: customerName,
                 email: customerEmail,

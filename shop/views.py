@@ -1492,9 +1492,11 @@ def order_pay(request, order_id):
 
     context = {
         'order': order,
-        'order_ref': f'FLORA{order.id}',
+        'order_ref': payment['order_ref'],
+        'payment_note': payment.get('payment_note') or payment['order_ref'],
+        'payment_tr': payment.get('tr') or payment['order_ref'],
         'total': order.get_total_cost(),
-        'amount_str': _amount_str(order.get_total_cost()),
+        'amount_str': payment['amount_str'],
         'shop_upi_id': get_upi_id(),
         'upi_id': get_upi_id(),
         'payer_upi_id': order.payer_upi_id,

@@ -79,22 +79,42 @@ def build_payment_ref(order_id, extra=''):
     return base[:35]
 
 
+def sanitize_upi_note(value, max_len=40):
+    """UPI tn/tr: letters, digits, space, hyphen — apps often show this as Remarks."""
+    raw = str(value or '').strip()
+    cleaned = []
+    for ch in raw:
+        if ch.isalnum() or ch in (' ', '-', '_'):
+            cleaned.append(ch)
+    text = ''.join(cleaned).strip() or 'FloraOrder'
+    # Collapse spaces
+    text = ' '.join(text.split())
+    return text[:max_len]
+
+
+def build_order_note_code(order_id):
+    """Default note code embedded in every scanner (shows in UPI payment remarks)."""
+    return f'FLORA{order_id}'
+
+
 def build_upi_link(amount, order_ref, note=None, tr=None):
     """
     Unique UPI pay intent for a specific order / QR time slot.
-    Pure upi:// link so GPay/PhonePe open payment instantly.
+    Always includes payment note (tn) + ref (tr) so bank apps show the order code.
     """
     pa = get_upi_id()
     am = _amount_str(amount)
-    tn = ''.join(ch for ch in (note or str(order_ref)) if ch.isalnum())[:40] or 'FloraOrder'
-    tr_val = ''.join(ch for ch in str(tr or order_ref) if ch.isalnum())[:35] or tn
+    # Note shown in GPay/PhonePe remarks — order code by default
+    tn = sanitize_upi_note(note or order_ref, max_len=40)
+    tr_val = sanitize_upi_note(tr or order_ref, max_len=35).replace(' ', '')
 
     parts = [
         f'pa={pa}',
         f'am={am}',
         'cu=INR',
-        f'tn={tn}',
-        f'tr={tr_val}',
+        # tn = remarks / note the customer pays with
+        f'tn={quote(tn, safe="")}',
+        f'tr={quote(tr_val, safe="")}',
     ]
     pn = get_upi_name()
     if pn:
@@ -148,21 +168,25 @@ def build_order_payment_qr(order, size=280, scan_page_url=None, slot=None):
     """
     Build UPI link + QR for one order.
 
-    Prefer pure upi:// in the QR so GPay/PhonePe open payment instantly.
-    (Admin Paid is set when customer opens the pay-now link / notify path.)
+    Scanner always embeds the order note code (e.g. FLORA12) in UPI remarks (tn)
+    so the shop can match the payment to the order.
     """
-    order_ref = f'FLORA{order.id}'
+    order_ref = build_order_note_code(order.id)
+    # Clear note for bank statement / UPI app remarks
+    payment_note = order_ref
     amount = order.get_total_cost()
     if slot is None:
         slot, _ = current_qr_slot()
+    # Unique tr per time slot; note (tn) stays the stable order code
     tr = build_payment_ref(order.id, f'S{slot}')
-    upi_link = build_upi_link(amount, order_ref, note=order_ref, tr=tr)
+    upi_link = build_upi_link(amount, order_ref, note=payment_note, tr=tr)
 
-    # Pure UPI in QR = payment app opens in ~1 second (no website wait)
+    # Pure UPI in QR — amount + note code filled by default
     qr_payload = upi_link
 
     return {
         'order_ref': order_ref,
+        'payment_note': payment_note,
         'amount_str': _amount_str(amount),
         'tr': tr,
         'slot': slot,
