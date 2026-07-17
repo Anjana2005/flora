@@ -31,10 +31,37 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="mark_paid">
             <button type="submit" style="background:#27AE60;color:white;border:none;padding:0.7rem 1.4rem;border-radius:999px;font-weight:700;cursor:pointer;">
-                Mark as Paid (reduce size stock)
+                Mark as Paid (reduce size stock + WhatsApp confirm)
             </button>
         </form>
-        <p style="color:#777;font-size:0.9rem;">Use this if the customer paid on UPI but did not tap “I have paid” on the site.</p>
+        <p style="color:#777;font-size:0.9rem;">Marks paid, reduces stock, then opens WhatsApp confirmation to shop number {{ shop_whatsapp_number }}.</p>
+        {% else %}
+        <div style="background:#e8f5e9;border-radius:12px;padding:1rem;margin:1rem 0;">
+            <p style="margin:0 0 0.75rem;font-weight:700;color:#1b5e20;">Payment completed — send WhatsApp confirmation</p>
+            <p style="margin:0 0 0.75rem;color:#2e7d32;font-size:0.95rem;">
+                Shop WhatsApp: <strong>{{ shop_whatsapp_number }}</strong>
+            </p>
+            {% if shop_whatsapp_url %}
+            <a id="shop-wa-confirm"
+               href="{{ shop_whatsapp_url }}"
+               target="_blank"
+               rel="noopener"
+               style="display:inline-block;background:#25D366;color:white;text-decoration:none;padding:0.75rem 1.25rem;border-radius:999px;font-weight:700;margin:0.25rem 0.25rem 0.25rem 0;">
+                Send confirmation on shop WhatsApp
+            </a>
+            {% endif %}
+            {% if customer_whatsapp_url %}
+            <a href="{{ customer_whatsapp_url }}"
+               target="_blank"
+               rel="noopener"
+               style="display:inline-block;background:#128C7E;color:white;text-decoration:none;padding:0.75rem 1.25rem;border-radius:999px;font-weight:700;margin:0.25rem;">
+                Send confirmation to customer
+            </a>
+            {% endif %}
+            <p style="margin:0.75rem 0 0;color:#555;font-size:0.9rem;">
+                Opens WhatsApp with paid order + product details. Tap <strong>Send</strong> to deliver the message.
+            </p>
+        </div>
         {% endif %}
 
         <h3 style="margin-top:1.5rem;">Items</h3>
@@ -68,4 +95,15 @@
         <a href="{% url 'shop:admin_orders' %}" style="display:inline-block;margin-top:1rem;">Back to Orders</a>
     </div>
 </div>
+
+{% if open_shop_whatsapp and shop_whatsapp_url %}
+<script>
+(function () {
+    var url = "{{ shop_whatsapp_url|escapejs }}";
+    setTimeout(function () {
+        window.open(url, '_blank');
+    }, 400);
+})();
+</script>
+{% endif %}
 {% endblock %}

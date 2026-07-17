@@ -384,10 +384,19 @@ def admin_dashboard(request):
     unread_contacts = Contact.objects.filter(read=False).count()
     total_offers = OfferSale.objects.count()
     active_offers = OfferSale.objects.filter(active=True).count()
+    from .payments import build_payment_confirmation_whatsapp_url
+
     total_orders = Order.objects.count()
     paid_orders = Order.objects.filter(paid=True).count()
     unpaid_orders = Order.objects.filter(paid=False).count()
-    recent_orders = Order.objects.order_by('-created_at')[:8]
+    recent_orders = list(Order.objects.order_by('-created_at')[:8])
+    for order in recent_orders:
+        if order.paid:
+            order.whatsapp_confirm_url = build_payment_confirmation_whatsapp_url(
+                order, request
+            )
+        else:
+            order.whatsapp_confirm_url = None
 
     context = {
         'total_products': total_products,
@@ -539,11 +548,21 @@ def admin_orders(request):
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('shop:home')
 
-    from .models import Order
+    from .payments import build_payment_confirmation_whatsapp_url
+
     orders = Order.objects.all().order_by('-created_at')
     paginator = Paginator(orders, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+
+    # Attach WhatsApp confirmation links for paid orders on this page
+    for order in page_obj:
+        if order.paid:
+            order.whatsapp_confirm_url = build_payment_confirmation_whatsapp_url(
+                order, request
+            )
+        else:
+            order.whatsapp_confirm_url = None
 
     context = {
         'orders': page_obj,
@@ -558,17 +577,26 @@ def admin_order_detail(request, id):
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('shop:home')
 
+    from .payments import (
+        build_payment_confirmation_whatsapp_url,
+        build_customer_confirmation_whatsapp_url,
+        get_whatsapp_number,
+    )
+
     order = get_object_or_404(Order, id=id)
+    open_shop_whatsapp = False
 
     if request.method == 'POST' and request.POST.get('action') == 'mark_paid':
         if order.mark_as_paid():
             messages.success(
                 request,
-                f'Order #FLORA{order.id} marked Paid. Size stock reduced for ordered items.',
+                f'Order #FLORA{order.id} marked Paid. Size stock reduced. '
+                f'Send WhatsApp confirmation to the shop number.',
             )
+            open_shop_whatsapp = True
         else:
             messages.info(request, 'Order was already marked as paid.')
-        return redirect('shop:admin_order_detail', id=order.id)
+            open_shop_whatsapp = True  # still allow resending confirmation
 
     # compute per-item line totals and order total
     from decimal import Decimal
@@ -586,10 +614,20 @@ def admin_order_detail(request, id):
         except Exception:
             pass
 
+    shop_whatsapp_url = None
+    customer_whatsapp_url = None
+    if order.paid:
+        shop_whatsapp_url = build_payment_confirmation_whatsapp_url(order, request)
+        customer_whatsapp_url = build_customer_confirmation_whatsapp_url(order, request)
+
     context = {
         'order': order,
         'items': items,
         'total_amount': total,
+        'shop_whatsapp_url': shop_whatsapp_url,
+        'customer_whatsapp_url': customer_whatsapp_url,
+        'shop_whatsapp_number': get_whatsapp_number(),
+        'open_shop_whatsapp': open_shop_whatsapp and bool(shop_whatsapp_url),
     }
     return render(request, 'shop/admin/order_detail.html', context)
 

@@ -167,3 +167,117 @@ def build_order_whatsapp_url(order, request=None, paid=None):
     """wa.me link that opens WhatsApp with product + order details prefilled."""
     message = build_order_message(order, request=request, paid=paid)
     return 'https://wa.me/' + get_whatsapp_number() + '?text=' + quote(message)
+
+
+def normalize_whatsapp_phone(phone):
+    """Normalize Indian mobile numbers to digits for wa.me."""
+    if not phone:
+        return ''
+    digits = ''.join(ch for ch in str(phone) if ch.isdigit())
+    if not digits:
+        return ''
+    # 10-digit Indian mobile → add 91
+    if len(digits) == 10 and digits[0] in '6789':
+        return '91' + digits
+    # Already has country code
+    if digits.startswith('91') and len(digits) >= 12:
+        return digits
+    return digits
+
+
+def build_payment_confirmation_message(order, request=None):
+    """
+    Confirmation message after payment is completed (for shop WhatsApp).
+    """
+    order_id = f'FLORA{order.id}'
+    total = float(order.get_total_cost())
+    customer = f'{order.first_name} {order.last_name}'.strip()
+    full_address = ', '.join(
+        part
+        for part in [order.address, order.city, order.postal_code, order.country]
+        if part
+    )
+
+    lines = [
+        '*Payment confirmed - Flora Shop Thrissur*',
+        '',
+        f'*Order ID:* {order_id}',
+        f'*Status:* PAID ✓',
+        f'*Amount received:* Rs {total:.2f}',
+        '',
+        '*Customer:*',
+        f'Name: {customer}',
+        f'Phone: {order.phone or "-"}',
+        f'Address: {full_address or "-"}',
+        '',
+        '*Products (stock reduced):*',
+    ]
+
+    for i, item in enumerate(
+        order.items.select_related('product', 'product__category').all(), start=1
+    ):
+        product = item.product
+        name = product.name if product else 'Deleted product'
+        size = (item.size or '').strip() or 'N/A'
+        qty = int(item.quantity or 0)
+        subtotal = float(item.price or 0) * qty
+        lines.append(f'{i}) {name} | Size: {size} | Qty: {qty} | Rs {subtotal:.2f}')
+
+    lines.extend(
+        [
+            '',
+            f'*Total: Rs {total:.2f}*',
+            '',
+            'Please pack and arrange delivery for this paid order.',
+        ]
+    )
+    return '\n'.join(lines)
+
+
+def build_payment_confirmation_whatsapp_url(order, request=None):
+    """
+    WhatsApp link to the shop number with payment confirmation + order details.
+    """
+    message = build_payment_confirmation_message(order, request=request)
+    return 'https://wa.me/' + get_whatsapp_number() + '?text=' + quote(message)
+
+
+def build_customer_confirmation_whatsapp_url(order, request=None):
+    """
+    Optional: WhatsApp link to the customer's phone with order confirmation.
+    Returns None if phone cannot be normalized.
+    """
+    phone = normalize_whatsapp_phone(order.phone)
+    if not phone:
+        return None
+
+    order_id = f'FLORA{order.id}'
+    total = float(order.get_total_cost())
+    customer = f'{order.first_name} {order.last_name}'.strip() or 'Customer'
+
+    lines = [
+        f'Hi {customer},',
+        '',
+        'Thank you for shopping at *Flora Shop Thrissur*!',
+        '',
+        f'Your payment for order *{order_id}* is *confirmed*.',
+        f'Amount: *Rs {total:.2f}*',
+        '',
+        '*Items:*',
+    ]
+    for item in order.items.select_related('product').all():
+        name = item.product.name if item.product else 'Item'
+        size = (item.size or '').strip()
+        size_txt = f' (Size {size})' if size else ''
+        lines.append(f'• {name}{size_txt} x {item.quantity}')
+
+    lines.extend(
+        [
+            '',
+            'We will pack your order soon. For help, reply on this chat.',
+            '',
+            '— Flora Shop Thrissur',
+        ]
+    )
+    return 'https://wa.me/' + phone + '?text=' + quote('\n'.join(lines))
+
