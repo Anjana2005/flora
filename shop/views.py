@@ -384,7 +384,7 @@ def admin_dashboard(request):
     unread_contacts = Contact.objects.filter(read=False).count()
     total_offers = OfferSale.objects.count()
     active_offers = OfferSale.objects.filter(active=True).count()
-    from .payments import build_payment_confirmation_whatsapp_url
+    from .payments import build_payment_confirmation_whatsapp_urls
 
     total_orders = Order.objects.count()
     paid_orders = Order.objects.filter(paid=True).count()
@@ -392,10 +392,16 @@ def admin_dashboard(request):
     recent_orders = list(Order.objects.order_by('-created_at')[:8])
     for order in recent_orders:
         if order.paid:
-            order.whatsapp_confirm_url = build_payment_confirmation_whatsapp_url(
+            order.whatsapp_confirm_links = build_payment_confirmation_whatsapp_urls(
                 order, request
             )
+            order.whatsapp_confirm_url = (
+                order.whatsapp_confirm_links[0]['url']
+                if order.whatsapp_confirm_links
+                else None
+            )
         else:
+            order.whatsapp_confirm_links = []
             order.whatsapp_confirm_url = None
 
     context = {
@@ -548,7 +554,7 @@ def admin_orders(request):
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('shop:home')
 
-    from .payments import build_payment_confirmation_whatsapp_url
+    from .payments import build_payment_confirmation_whatsapp_urls
 
     orders = Order.objects.all().order_by('-created_at')
     paginator = Paginator(orders, 10)
@@ -558,10 +564,16 @@ def admin_orders(request):
     # Attach WhatsApp confirmation links for paid orders on this page
     for order in page_obj:
         if order.paid:
-            order.whatsapp_confirm_url = build_payment_confirmation_whatsapp_url(
+            order.whatsapp_confirm_links = build_payment_confirmation_whatsapp_urls(
                 order, request
             )
+            order.whatsapp_confirm_url = (
+                order.whatsapp_confirm_links[0]['url']
+                if order.whatsapp_confirm_links
+                else None
+            )
         else:
+            order.whatsapp_confirm_links = []
             order.whatsapp_confirm_url = None
 
     context = {
@@ -578,9 +590,9 @@ def admin_order_detail(request, id):
         return redirect('shop:home')
 
     from .payments import (
-        build_payment_confirmation_whatsapp_url,
+        build_payment_confirmation_whatsapp_urls,
         build_customer_confirmation_whatsapp_url,
-        get_whatsapp_number,
+        get_whatsapp_numbers,
     )
 
     order = get_object_or_404(Order, id=id)
@@ -591,7 +603,7 @@ def admin_order_detail(request, id):
             messages.success(
                 request,
                 f'Order #FLORA{order.id} marked Paid. Size stock reduced. '
-                f'Send WhatsApp confirmation to the shop number.',
+                f'Send WhatsApp confirmation to shop numbers.',
             )
             open_shop_whatsapp = True
         else:
@@ -614,20 +626,21 @@ def admin_order_detail(request, id):
         except Exception:
             pass
 
-    shop_whatsapp_url = None
+    shop_whatsapp_links = []
     customer_whatsapp_url = None
     if order.paid:
-        shop_whatsapp_url = build_payment_confirmation_whatsapp_url(order, request)
+        shop_whatsapp_links = build_payment_confirmation_whatsapp_urls(order, request)
         customer_whatsapp_url = build_customer_confirmation_whatsapp_url(order, request)
 
     context = {
         'order': order,
         'items': items,
         'total_amount': total,
-        'shop_whatsapp_url': shop_whatsapp_url,
+        'shop_whatsapp_links': shop_whatsapp_links,
+        'shop_whatsapp_url': shop_whatsapp_links[0]['url'] if shop_whatsapp_links else None,
         'customer_whatsapp_url': customer_whatsapp_url,
-        'shop_whatsapp_number': get_whatsapp_number(),
-        'open_shop_whatsapp': open_shop_whatsapp and bool(shop_whatsapp_url),
+        'shop_whatsapp_numbers': get_whatsapp_numbers(),
+        'open_shop_whatsapp': open_shop_whatsapp and bool(shop_whatsapp_links),
     }
     return render(request, 'shop/admin/order_detail.html', context)
 

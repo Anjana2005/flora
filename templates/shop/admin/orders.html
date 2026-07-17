@@ -27,10 +27,12 @@
                     <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
                     <td>{% if order.paid %}<span style="color:green;font-weight:700;">Yes ✓</span>{% else %}<span style="color:#d9534f;font-weight:700;">No</span>{% endif %}</td>
                     <td>
-                        {% if order.paid and order.whatsapp_confirm_url %}
-                        <a href="{{ order.whatsapp_confirm_url }}" target="_blank" rel="noopener" style="color:#25D366;font-weight:700;">
-                            Send confirmation
-                        </a>
+                        {% if order.paid and order.whatsapp_confirm_links %}
+                            {% for link in order.whatsapp_confirm_links %}
+                            <a href="{{ link.url }}" target="_blank" rel="noopener" style="color:#25D366;font-weight:700;display:block;">
+                                WA {{ link.phone|slice:"-10:" }}
+                            </a>
+                            {% endfor %}
                         {% else %}
                         <span style="color:#999;">—</span>
                         {% endif %}

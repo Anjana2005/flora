@@ -14,9 +14,28 @@ def get_upi_name():
 
 
 def get_whatsapp_number():
-    return (
-        getattr(settings, 'WHATSAPP_ORDER_NUMBER', None) or '919074860867'
-    ).strip().replace('+', '').replace(' ', '')
+    """Primary shop WhatsApp (first number)."""
+    numbers = get_whatsapp_numbers()
+    return numbers[0] if numbers else '918891331444'
+
+
+def get_whatsapp_numbers():
+    """All shop WhatsApp numbers (digits with country code)."""
+    configured = getattr(settings, 'WHATSAPP_SHOP_NUMBERS', None) or []
+    numbers = []
+    for n in configured:
+        digits = ''.join(ch for ch in str(n) if ch.isdigit())
+        if digits and digits not in numbers:
+            numbers.append(digits)
+    primary = getattr(settings, 'WHATSAPP_ORDER_NUMBER', None) or '918891331444'
+    primary = ''.join(ch for ch in str(primary) if ch.isdigit())
+    if primary and primary not in numbers:
+        numbers.insert(0, primary)
+    # Ensure both shop numbers are present
+    for fallback in ('918891331444', '919605531101'):
+        if fallback not in numbers:
+            numbers.append(fallback)
+    return numbers
 
 
 def _amount_str(amount):
@@ -163,10 +182,24 @@ def build_order_message(order, request=None, paid=None):
     return '\n'.join(lines)
 
 
-def build_order_whatsapp_url(order, request=None, paid=None):
+def build_order_whatsapp_url(order, request=None, paid=None, phone=None):
     """wa.me link that opens WhatsApp with product + order details prefilled."""
     message = build_order_message(order, request=request, paid=paid)
-    return 'https://wa.me/' + get_whatsapp_number() + '?text=' + quote(message)
+    number = phone or get_whatsapp_number()
+    return 'https://wa.me/' + number + '?text=' + quote(message)
+
+
+def build_order_whatsapp_urls(order, request=None, paid=None):
+    """WhatsApp order links for every shop number."""
+    message = build_order_message(order, request=request, paid=paid)
+    return [
+        {
+            'phone': n,
+            'display': f'+{n}' if not n.startswith('+') else n,
+            'url': 'https://wa.me/' + n + '?text=' + quote(message),
+        }
+        for n in get_whatsapp_numbers()
+    ]
 
 
 def normalize_whatsapp_phone(phone):
@@ -234,12 +267,26 @@ def build_payment_confirmation_message(order, request=None):
     return '\n'.join(lines)
 
 
-def build_payment_confirmation_whatsapp_url(order, request=None):
+def build_payment_confirmation_whatsapp_url(order, request=None, phone=None):
     """
-    WhatsApp link to the shop number with payment confirmation + order details.
+    WhatsApp link to a shop number with payment confirmation + order details.
     """
     message = build_payment_confirmation_message(order, request=request)
-    return 'https://wa.me/' + get_whatsapp_number() + '?text=' + quote(message)
+    number = phone or get_whatsapp_number()
+    return 'https://wa.me/' + number + '?text=' + quote(message)
+
+
+def build_payment_confirmation_whatsapp_urls(order, request=None):
+    """Payment confirmation links for all shop WhatsApp numbers."""
+    message = build_payment_confirmation_message(order, request=request)
+    return [
+        {
+            'phone': n,
+            'display': f'+{n[:2]} {n[2:]}' if len(n) > 2 else n,
+            'url': 'https://wa.me/' + n + '?text=' + quote(message),
+        }
+        for n in get_whatsapp_numbers()
+    ]
 
 
 def build_customer_confirmation_whatsapp_url(order, request=None):

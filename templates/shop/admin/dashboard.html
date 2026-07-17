@@ -185,11 +185,13 @@
                                 {% endif %}
                             </td>
                             <td style="padding:0.6rem;">
-                                {% if order.paid and order.whatsapp_confirm_url %}
-                                <a href="{{ order.whatsapp_confirm_url }}" target="_blank" rel="noopener"
-                                   style="color:#25D366;font-weight:700;text-decoration:none;">
-                                    Send confirmation
-                                </a>
+                                {% if order.paid and order.whatsapp_confirm_links %}
+                                    {% for link in order.whatsapp_confirm_links %}
+                                    <a href="{{ link.url }}" target="_blank" rel="noopener"
+                                       style="color:#25D366;font-weight:700;text-decoration:none;display:block;margin:0.15rem 0;">
+                                        WA {{ link.phone|slice:"-10:" }}
+                                    </a>
+                                    {% endfor %}
                                 {% else %}
                                 <span style="color:#999;">—</span>
                                 {% endif %}

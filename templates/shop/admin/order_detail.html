@@ -34,22 +34,25 @@
                 Mark as Paid (reduce size stock + WhatsApp confirm)
             </button>
         </form>
-        <p style="color:#777;font-size:0.9rem;">Marks paid, reduces stock, then opens WhatsApp confirmation to shop number {{ shop_whatsapp_number }}.</p>
+        <p style="color:#777;font-size:0.9rem;">Marks paid, reduces stock, then opens WhatsApp confirmation to shop numbers.</p>
         {% else %}
         <div style="background:#e8f5e9;border-radius:12px;padding:1rem;margin:1rem 0;">
             <p style="margin:0 0 0.75rem;font-weight:700;color:#1b5e20;">Payment completed — send WhatsApp confirmation</p>
             <p style="margin:0 0 0.75rem;color:#2e7d32;font-size:0.95rem;">
-                Shop WhatsApp: <strong>{{ shop_whatsapp_number }}</strong>
+                Shop numbers:
+                {% for n in shop_whatsapp_numbers %}
+                    <strong>+{{ n }}</strong>{% if not forloop.last %}, {% endif %}
+                {% endfor %}
             </p>
-            {% if shop_whatsapp_url %}
-            <a id="shop-wa-confirm"
-               href="{{ shop_whatsapp_url }}"
+            {% for link in shop_whatsapp_links %}
+            <a {% if forloop.first %}id="shop-wa-confirm"{% endif %}
+               href="{{ link.url }}"
                target="_blank"
                rel="noopener"
                style="display:inline-block;background:#25D366;color:white;text-decoration:none;padding:0.75rem 1.25rem;border-radius:999px;font-weight:700;margin:0.25rem 0.25rem 0.25rem 0;">
-                Send confirmation on shop WhatsApp
+                Confirm on WhatsApp {{ link.phone }}
             </a>
-            {% endif %}
+            {% endfor %}
             {% if customer_whatsapp_url %}
             <a href="{{ customer_whatsapp_url }}"
                target="_blank"
@@ -96,10 +99,11 @@
     </div>
 </div>
 
-{% if open_shop_whatsapp and shop_whatsapp_url %}
+{% if open_shop_whatsapp and shop_whatsapp_links %}
 <script>
 (function () {
-    var url = "{{ shop_whatsapp_url|escapejs }}";
+    // Open first shop number confirmation; second can be clicked manually
+    var url = "{{ shop_whatsapp_links.0.url|escapejs }}";
     setTimeout(function () {
         window.open(url, '_blank');
     }, 400);
