@@ -37,7 +37,7 @@ def _persist_image(field_file):
 class MediaBlob(models.Model):
     """
     Durable copy of uploaded media (Postgres).
-    Render free disk is ephemeral; this keeps product images available.
+    Render free disk is ephemeral; this keeps product images and videos available.
     """
     path = models.CharField(max_length=500, unique=True, db_index=True)
     data = models.BinaryField()
@@ -289,6 +289,25 @@ class ProductImage(models.Model):
         self.image = _maybe_compress(self.image)
         super().save(*args, **kwargs)
         _persist_image(self.image)
+
+
+class ProductVideo(models.Model):
+    """Product videos managed by admin (mp4/webm/mov). Stored in MediaBlob on Render."""
+    product = models.ForeignKey(Product, related_name='videos', on_delete=models.CASCADE)
+    video = models.FileField(upload_to='products/videos/')
+    title = models.CharField(max_length=200, blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Video for {self.product.name}"
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Persist full file in Postgres (same path as images) for free Render
+        _persist_image(self.video)
 
 
 class OfferSale(models.Model):

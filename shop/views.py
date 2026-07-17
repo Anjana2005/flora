@@ -730,13 +730,27 @@ def admin_product_create(request):
                         available=quantity > 0
                     )
             
-            # Handle image uploads
-            images = request.FILES.getlist('images')
-            for image in images:
-                if image:
-                    ProductImage.objects.create(product=product, image=image)
-            
-            messages.success(request, 'Product created successfully!')
+            # Handle image + video uploads
+            from .models import ProductVideo
+            media_files = list(request.FILES.getlist('images')) + list(request.FILES.getlist('videos')) + list(request.FILES.getlist('media'))
+            img_n = vid_n = 0
+            for f in media_files:
+                if not f:
+                    continue
+                ctype = (getattr(f, 'content_type', None) or '').lower()
+                name = (getattr(f, 'name', '') or '').lower()
+                is_video = ctype.startswith('video/') or name.endswith(('.mp4', '.webm', '.mov', '.m4v', '.avi'))
+                if is_video:
+                    ProductVideo.objects.create(product=product, video=f, title=getattr(f, 'name', '')[:200])
+                    vid_n += 1
+                else:
+                    ProductImage.objects.create(product=product, image=f)
+                    img_n += 1
+
+            messages.success(
+                request,
+                f'Product created successfully! ({img_n} image(s), {vid_n} video(s))',
+            )
             return redirect('shop:admin_product_detail', id=product.id)
         except Exception as e:
             messages.error(request, f'Error creating product: {str(e)}')
@@ -887,31 +901,62 @@ def admin_category_delete(request, id):
 
 @login_required(login_url='shop:login')
 def admin_product_add_image(request, id):
-    """Add images to product"""
+    """Add images and/or videos to a product (Manage Products admin)."""
     if not request.user.is_staff:
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('shop:home')
-    
+
     product = get_object_or_404(Product, id=id)
-    
+
     if request.method == 'POST':
         try:
-            from .models import ProductImage
-            images = request.FILES.getlist('images')
-            
-            if not images:
-                messages.warning(request, 'No images selected.')
+            from .models import ProductImage, ProductVideo
+
+            files = []
+            for key in ('media', 'images', 'videos', 'video'):
+                files.extend(request.FILES.getlist(key))
+
+            if not files:
+                messages.warning(request, 'No files selected. Choose images or videos to upload.')
             else:
-                count = 0
-                for image in images:
-                    if image:
-                        ProductImage.objects.create(product=product, image=image)
-                        count += 1
-                
-                messages.success(request, f'{count} image(s) uploaded successfully!')
+                img_n = vid_n = 0
+                for f in files:
+                    if not f:
+                        continue
+                    ctype = (getattr(f, 'content_type', None) or '').lower()
+                    name = (getattr(f, 'name', '') or '').lower()
+                    is_video = ctype.startswith('video/') or name.endswith(
+                        ('.mp4', '.webm', '.mov', '.m4v', '.avi')
+                    )
+                    if is_video:
+                        # Soft size guard (~45MB) for free hosting
+                        size = getattr(f, 'size', 0) or 0
+                        if size > 45 * 1024 * 1024:
+                            messages.warning(
+                                request,
+                                f'Skipped {getattr(f, "name", "video")}: max 45MB per video.',
+                            )
+                            continue
+                        ProductVideo.objects.create(
+                            product=product,
+                            video=f,
+                            title=(getattr(f, 'name', '') or '')[:200],
+                        )
+                        vid_n += 1
+                    else:
+                        ProductImage.objects.create(product=product, image=f)
+                        img_n += 1
+
+                if img_n or vid_n:
+                    messages.success(
+                        request,
+                        f'Uploaded {img_n} image(s) and {vid_n} video(s) successfully!',
+                    )
+                else:
+                    messages.warning(request, 'No valid image or video files uploaded.')
         except Exception as e:
-            messages.error(request, f'Error uploading images: {str(e)}')
-    
+            messages.error(request, f'Error uploading media: {str(e)}')
+
     return redirect('shop:admin_product_detail', id=product.id)
 
 
@@ -921,18 +966,39 @@ def admin_product_delete_image(request, id):
     if not request.user.is_staff:
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('shop:home')
-    
+
     from .models import ProductImage
     image = get_object_or_404(ProductImage, id=id)
     product_id = image.product.id
-    
+
     if request.method == 'POST':
         try:
             image.delete()
             messages.success(request, 'Image deleted successfully!')
         except Exception as e:
             messages.error(request, f'Error deleting image: {str(e)}')
-    
+
+    return redirect('shop:admin_product_detail', id=product_id)
+
+
+@login_required(login_url='shop:login')
+def admin_product_delete_video(request, id):
+    """Delete product video"""
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('shop:home')
+
+    from .models import ProductVideo
+    video = get_object_or_404(ProductVideo, id=id)
+    product_id = video.product_id
+
+    if request.method == 'POST':
+        try:
+            video.delete()
+            messages.success(request, 'Video deleted successfully!')
+        except Exception as e:
+            messages.error(request, f'Error deleting video: {str(e)}')
+
     return redirect('shop:admin_product_detail', id=product_id)
 
 

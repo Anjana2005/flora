@@ -406,19 +406,32 @@
                 </div>
             </form>
 
-            <!-- Images Management Section -->
+            <!-- Images & Videos Management -->
             <div class="images-section">
-                <h2><i class="fas fa-images"></i> Product Images</h2>
-                
+                <h2><i class="fas fa-photo-video"></i> Product Images &amp; Videos</h2>
+                <p style="color:#666;margin:0 0 1rem;font-size:0.95rem;">
+                    Upload photos (JPG/PNG/WebP) and short videos (MP4/WebM/MOV, max ~45MB each).
+                    Files are saved so they keep working after site redeploys.
+                </p>
+
+                {% if messages %}
+                    {% for message in messages %}
+                    <div style="padding:0.75rem 1rem;border-radius:10px;margin-bottom:1rem;{% if 'error' in message.tags %}background:#ffebee;color:#b71c1c;{% elif 'warning' in message.tags %}background:#fff8e1;color:#6d4c00;{% else %}background:#e8f5e9;color:#1b5e20;{% endif %}">
+                        {{ message }}
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
                 <div class="image-upload">
-                    <form id="image-upload-form" method="post" enctype="multipart/form-data" action="{% url 'shop:admin_product_add_image' id=product.id %}">
+                    <form id="media-upload-form" method="post" enctype="multipart/form-data" action="{% url 'shop:admin_product_add_media' id=product.id %}">
                         {% csrf_token %}
-                        <label for="images"><i class="fas fa-cloud-upload-alt"></i> Click to Upload Images</label>
-                        <input type="file" id="images" name="images" multiple accept="image/*">
-                        <p>or drag and drop images here</p>
+                        <label for="media"><i class="fas fa-cloud-upload-alt"></i> Click to Upload Images or Videos</label>
+                        <input type="file" id="media" name="media" multiple accept="image/*,video/mp4,video/webm,video/quicktime,video/*">
+                        <p>or drag and drop images / videos here · multiple files OK</p>
                     </form>
                 </div>
 
+                <h3 style="margin:1.5rem 0 0.75rem;font-size:1.05rem;color:#5A3F4A;"><i class="fas fa-images"></i> Images</h3>
                 {% if product.images.all %}
                     <div class="images-grid">
                         {% for image in product.images.all %}
@@ -435,7 +448,28 @@
                     </div>
                 {% else %}
                     <div class="no-images">
-                        <p><i class="fas fa-image"></i> No images uploaded yet. Upload your first product image above.</p>
+                        <p><i class="fas fa-image"></i> No images yet.</p>
+                    </div>
+                {% endif %}
+
+                <h3 style="margin:1.75rem 0 0.75rem;font-size:1.05rem;color:#5A3F4A;"><i class="fas fa-video"></i> Videos</h3>
+                {% if product.videos.all %}
+                    <div class="images-grid">
+                        {% for vid in product.videos.all %}
+                            <div class="image-item" style="min-height:150px;">
+                                <video src="{{ vid.video.url }}" controls playsinline muted style="width:100%;height:150px;object-fit:cover;background:#111;display:block;"></video>
+                                <div class="image-actions">
+                                    <form method="post" action="{% url 'shop:admin_product_delete_video' id=vid.id %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-delete" onclick="return confirm('Delete this video?')"><i class="fas fa-trash"></i> Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="no-images">
+                        <p><i class="fas fa-video"></i> No videos yet.</p>
                     </div>
                 {% endif %}
             </div>
@@ -444,11 +478,10 @@
 </div>
 
 <script>
-    // Drag and drop functionality
-    const uploadForm = document.getElementById('image-upload-form');
-    const fileInput = document.getElementById('images');
+    const uploadForm = document.getElementById('media-upload-form');
+    const fileInput = document.getElementById('media');
 
-    if (uploadForm) {
+    if (uploadForm && fileInput) {
         uploadForm.addEventListener('dragover', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -465,15 +498,12 @@
             e.preventDefault();
             e.stopPropagation();
             uploadForm.style.opacity = '1';
-            
-            const files = e.dataTransfer.files;
-            fileInput.files = files;
-            
-            // Auto-submit the form
-            uploadForm.submit();
+            if (e.dataTransfer.files && e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                uploadForm.submit();
+            }
         });
 
-        // Auto-submit when files are selected
         fileInput.addEventListener('change', () => {
             if (fileInput.files.length > 0) {
                 uploadForm.submit();
