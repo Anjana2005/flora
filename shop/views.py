@@ -1522,23 +1522,17 @@ def order_pay(request, order_id):
 
 def order_launch_payment(request, order_id):
     """
-    Called when customer uses the unique order scanner OR a pay button.
-    Always sets Paid=Yes in admin (and stock), then UPI if needed, then WhatsApp shop.
+    Scanner / pay button:
+    1) Mark Paid=Yes in admin + reduce stock
+    2) Redirect the browser directly to shop WhatsApp with order details
     """
     from .payments import (
-        build_order_payment_qr,
-        build_android_intent_link,
-        build_gpay_link,
-        build_phonepe_link,
-        build_paytm_link,
         build_payment_confirmation_whatsapp_url,
         is_valid_upi_id,
-        _amount_str,
     )
-    from django.urls import reverse
+    from django.http import HttpResponseRedirect
 
     order = get_object_or_404(Order, id=order_id)
-    method = (request.GET.get('method') or 'upi').lower()
 
     if not is_valid_upi_id(order.payer_upi_id):
         messages.error(
@@ -1547,63 +1541,13 @@ def order_launch_payment(request, order_id):
         )
         return redirect('shop:order_pay', order_id=order.id)
 
-    # Critical: mark Paid so admin dashboard shows Yes after scanner payment
-    newly_paid = False
     if not order.paid:
-        newly_paid = order.mark_as_paid(payer_upi_id=order.payer_upi_id)
-    # Reload from DB so paid flag is current
+        order.mark_as_paid(payer_upi_id=order.payer_upi_id)
     order.refresh_from_db()
 
-    payment = build_order_payment_qr(order)
-    order_ref = payment['order_ref']
-    total = order.get_total_cost()
-
-    # scan = opened by scanning order QR (site hit first); still open UPI app to pay
-    # after_scan / whatsapp / done = money already sent; skip UPI open
-    if method in ('after_scan', 'whatsapp', 'done'):
-        pay_target = ''
-        skip_upi = True
-    elif method == 'scan':
-        # Scanner opened this page → mark paid (above) → open UPI to complete money transfer
-        pay_target = payment['upi_link']
-        skip_upi = False
-    elif method == 'gpay':
-        pay_target = build_gpay_link(total, order_ref)
-        skip_upi = False
-    elif method == 'phonepe':
-        pay_target = build_phonepe_link(total, order_ref)
-        skip_upi = False
-    elif method == 'paytm':
-        pay_target = build_paytm_link(total, order_ref)
-        skip_upi = False
-    elif method == 'android':
-        pay_target = build_android_intent_link(total, order_ref)
-        skip_upi = False
-    else:
-        pay_target = payment['upi_link']
-        skip_upi = False
-
+    # Go straight to shop WhatsApp (no intermediate page)
     whatsapp_url = build_payment_confirmation_whatsapp_url(order, request)
-    success_url = reverse('shop:order_paid_success', args=[order.id])
-
-    return render(
-        request,
-        'shop/order_payment_launch.html',
-        {
-            'order': order,
-            'order_ref': order_ref,
-            'total': total,
-            'amount_str': _amount_str(total),
-            'pay_target': pay_target,
-            'whatsapp_url': whatsapp_url,
-            'success_url': success_url,
-            'items': order.items.select_related('product').all(),
-            'payer_upi_id': order.payer_upi_id,
-            'skip_upi': skip_upi,
-            'newly_paid': newly_paid,
-            'is_paid': order.paid,
-        },
-    )
+    return HttpResponseRedirect(whatsapp_url)
 
 
 def order_confirm_paid(request, order_id):
