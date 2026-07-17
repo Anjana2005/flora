@@ -619,6 +619,36 @@
     let selectedSizeQuantity = null;
     const hasSizes = document.getElementById('size-selector') !== null;
 
+    function showProductImage(url, thumb) {
+        const img = document.getElementById('main-image');
+        const vid = document.getElementById('main-video');
+        if (vid) {
+            vid.pause();
+            vid.removeAttribute('src');
+            vid.load();
+            vid.style.display = 'none';
+        }
+        if (img) {
+            img.src = url;
+            img.style.display = 'block';
+        }
+        document.querySelectorAll('.thumbnail').forEach(function (t) { t.classList.remove('active'); });
+        if (thumb) thumb.classList.add('active');
+    }
+
+    function showProductVideo(url, thumb) {
+        const img = document.getElementById('main-image');
+        const vid = document.getElementById('main-video');
+        if (img) img.style.display = 'none';
+        if (vid) {
+            vid.src = url;
+            vid.style.display = 'block';
+            try { vid.play(); } catch (e) {}
+        }
+        document.querySelectorAll('.thumbnail').forEach(function (t) { t.classList.remove('active'); });
+        if (thumb) thumb.classList.add('active');
+    }
+
     function selectSize(btn) {
         // Prevent selecting disabled sizes
         if (btn.disabled) {
