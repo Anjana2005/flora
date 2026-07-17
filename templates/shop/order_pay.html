@@ -30,8 +30,8 @@
         margin: 0.75rem 0 1.25rem;
     }
     .alert-info {
-        background: #e8f5e9;
-        color: #1b5e20;
+        background: #e3f2fd;
+        color: #0d47a1;
         border-radius: 12px;
         padding: 0.85rem 1rem;
         font-size: 0.92rem;
@@ -39,12 +39,12 @@
         margin-bottom: 1rem;
         line-height: 1.45;
     }
-    .alert-warn {
-        background: #fff8e1;
-        color: #6d4c00;
+    .alert-ok {
+        background: #e8f5e9;
+        color: #1b5e20;
         border-radius: 12px;
         padding: 0.85rem 1rem;
-        font-size: 0.9rem;
+        font-size: 0.92rem;
         text-align: left;
         margin: 1rem 0;
         line-height: 1.45;
@@ -97,11 +97,14 @@
         box-shadow: 0 10px 22px rgba(232,122,150,0.28);
         cursor: pointer;
         box-sizing: border-box;
+        font-family: inherit;
     }
+    .pay-btn.copy-main { background: linear-gradient(135deg, #5C6BC0, #3949AB); }
     .pay-btn.gpay { background: linear-gradient(135deg, #4285F4, #34A853); }
     .pay-btn.phonepe { background: linear-gradient(135deg, #5f259f, #7b3fb8); }
     .pay-btn.paytm { background: linear-gradient(135deg, #00baf2, #002970); }
     .pay-btn.wa { background: linear-gradient(135deg, #25D366, #128C7E); }
+    .pay-btn.confirm { background: linear-gradient(135deg, #27AE60, #2ECC71); }
     .pay-btn.secondary {
         background: #fff;
         color: #E87A96;
@@ -137,6 +140,13 @@
         cursor: pointer;
         font-weight: 600;
     }
+    .muted-title {
+        margin-top: 1.5rem;
+        font-size: 0.85rem;
+        color: #999;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
 </style>
 {% endblock %}
 
@@ -147,32 +157,45 @@
         <p>Order <strong>{{ order_ref }}</strong></p>
         <div class="pay-amount">₹{{ total }}</div>
 
-        <div class="qr-box">
-            <img src="{{ qr_url }}" alt="UPI QR code for payment" id="upi-qr">
+        <div class="alert-info">
+            <strong>Best method (same as paying inside the app):</strong>
+            Copy the UPI ID below → open GPay/PhonePe yourself → Send money → paste ID → enter amount.
+            Website “open app” buttons often fail even when the UPI ID works.
         </div>
-        <p class="hint">Scan this QR with GPay / PhonePe / Paytm / BHIM</p>
 
         <div class="upi-id-box">
-            Pay to UPI ID: <strong id="upi-id">{{ upi_id }}</strong><br>
-            Name: <strong>{{ upi_name }}</strong><br>
-            Amount: <strong id="pay-amount">₹{{ total }}</strong><br>
-            Note / message: <strong id="pay-note">{{ order_ref }}</strong>
+            UPI ID: <strong id="upi-id">{{ upi_id }}</strong><br>
+            Amount: <strong id="pay-amount">{{ amount_str }}</strong><br>
+            Note: <strong id="pay-note">{{ order_ref }}</strong>
         </div>
         <div class="copy-row">
             <button type="button" class="copy-btn" onclick="copyText('upi-id', 'UPI ID')">Copy UPI ID</button>
+            <button type="button" class="copy-btn" onclick="copyText('pay-amount', 'Amount')">Copy amount</button>
             <button type="button" class="copy-btn" onclick="copyText('pay-note', 'Note')">Copy note</button>
         </div>
 
+        <button type="button" class="pay-btn copy-main" onclick="copyText('upi-id', 'UPI ID')">
+            1) Copy UPI ID — then open GPay / PhonePe
+        </button>
+
         <ol class="steps">
-            <li>Open <strong>GPay / PhonePe / Paytm</strong></li>
-            <li>Send money to: <strong>{{ upi_id }}</strong></li>
-            <li>Enter amount <strong>₹{{ total }}</strong></li>
-            <li>Add note: <strong>{{ order_ref }}</strong></li>
-            <li>Pay with UPI PIN</li>
-            <li>Return here and tap <strong>Payment successful — confirm &amp; update stock</strong></li>
+            <li>Tap <strong>Copy UPI ID</strong> above</li>
+            <li>Open <strong>GPay / PhonePe / Paytm</strong> (from your phone home screen)</li>
+            <li>Tap <strong>Send / Pay</strong> → To UPI ID</li>
+            <li>Paste <strong>{{ upi_id }}</strong></li>
+            <li>Enter amount <strong>₹{{ amount_str }}</strong></li>
+            <li>Note: <strong>{{ order_ref }}</strong> → Pay with PIN</li>
+            <li>Come back and tap the green confirm button</li>
         </ol>
 
-        <a class="pay-btn" href="{{ upi_link }}">Pay with UPI app</a>
+        <div class="qr-box">
+            <img src="{{ qr_url }}" alt="UPI QR code" id="upi-qr">
+        </div>
+        <p class="hint">Or scan this QR in any UPI app</p>
+
+        <p class="muted-title">Try open app (may not work on all phones)</p>
+        <a class="pay-btn" href="{{ upi_link }}" id="upi-open">Open UPI app</a>
+        <a class="pay-btn" href="{{ android_intent_link }}">Open UPI (Android)</a>
         <a class="pay-btn gpay" href="{{ gpay_link }}">Google Pay</a>
         <a class="pay-btn phonepe" href="{{ phonepe_link }}">PhonePe</a>
         <a class="pay-btn paytm" href="{{ paytm_link }}">Paytm</a>
@@ -190,29 +213,23 @@
         </ul>
 
         {% if order.paid %}
-        <div class="alert-info" style="background:#e8f5e9;color:#1b5e20;">
-            <strong>Payment recorded.</strong> Admin sees <strong>Paid: Yes</strong>.
-            Product size stock has been reduced.
+        <div class="alert-ok">
+            <strong>Payment recorded.</strong> Admin sees Paid: Yes. Stock reduced.
         </div>
         <a class="pay-btn secondary" href="{% url 'shop:order_paid_success' order.id %}">View confirmation</a>
         {% else %}
-        <div class="alert-info" style="background:#fff3e0;color:#e65100;margin-top:1rem;">
-            <strong>Stock is NOT reduced until payment is confirmed.</strong>
-            After you finish UPI payment, tap the green button below.
-            That marks <strong>Paid: Yes</strong> in admin and decreases stock for this product/size only once.
+        <div class="alert-ok">
+            Stock is reduced only after you confirm payment below (not when you only place the order).
         </div>
-        <form method="post" action="{% url 'shop:order_confirm_paid' order.id %}" id="confirmPaidForm" style="margin:1rem 0;">
+        <form method="post" action="{% url 'shop:order_confirm_paid' order.id %}" style="margin:1rem 0;">
             {% csrf_token %}
-            <button type="submit" class="pay-btn" style="width:100%;border:none;cursor:pointer;background:linear-gradient(135deg,#27AE60,#2ECC71);">
-                Payment successful — confirm &amp; update stock
+            <button type="submit" class="pay-btn confirm">
+                2) I paid successfully — confirm &amp; update stock
             </button>
         </form>
-        <p class="hint">UPI apps cannot notify the website automatically. Confirming here is what tells the shop you paid and reduces stock.</p>
         {% endif %}
 
-        <a class="pay-btn wa" href="{{ whatsapp_url }}" target="_blank" rel="noopener">
-            Notify shop on WhatsApp
-        </a>
+        <a class="pay-btn wa" href="{{ whatsapp_url }}" target="_blank" rel="noopener">Notify shop on WhatsApp</a>
         <a class="pay-btn secondary" href="{% url 'shop:home' %}">Back to shop</a>
     </div>
 </div>
@@ -223,7 +240,7 @@ function copyText(id, label) {
     var text = (el.innerText || el.textContent || '').replace('₹', '').trim();
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(function () {
-            alert(label + ' copied: ' + text);
+            alert(label + ' copied: ' + text + '\n\nNow open GPay/PhonePe and paste it.');
         });
     } else {
         prompt('Copy ' + label + ':', text);

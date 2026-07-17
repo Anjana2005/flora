@@ -1373,12 +1373,14 @@ def order_pay(request, order_id):
     from .payments import (
         build_upi_link,
         build_upi_qr_url,
+        build_android_intent_link,
         build_gpay_link,
         build_phonepe_link,
         build_paytm_link,
         build_order_whatsapp_url,
         get_upi_id,
         get_upi_name,
+        _amount_str,
     )
 
     order = get_object_or_404(Order, id=order_id)
@@ -1389,9 +1391,11 @@ def order_pay(request, order_id):
         'order': order,
         'order_ref': order_ref,
         'total': total,
+        'amount_str': _amount_str(total),
         'upi_id': get_upi_id(),
-        'upi_name': get_upi_name(),
+        'upi_name': get_upi_name() or '—',
         'upi_link': upi_link,
+        'android_intent_link': build_android_intent_link(total, order_ref),
         'gpay_link': build_gpay_link(total, order_ref),
         'phonepe_link': build_phonepe_link(total, order_ref),
         'paytm_link': build_paytm_link(total, order_ref),
