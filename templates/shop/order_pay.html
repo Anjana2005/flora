@@ -138,7 +138,7 @@
         <a class="pay-btn gpay" href="{{ pay_gpay_url }}">Google Pay → WhatsApp shop</a>
         <a class="pay-btn phonepe" href="{{ pay_phonepe_url }}">PhonePe → WhatsApp shop</a>
         <a class="pay-btn paytm" href="{{ pay_paytm_url }}">Paytm → WhatsApp shop</a>
-        <a class="pay-btn wa" href="{{ pay_upi_url|cut:'method=upi' }}method=after_scan" id="after-scan-link">
+        <a class="pay-btn wa" href="{% url 'shop:order_launch_payment' order.id %}?method=after_scan" id="after-scan-link">
             I paid with scanner — open WhatsApp to shop
         </a>
 
