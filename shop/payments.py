@@ -10,6 +10,7 @@ def get_upi_id():
 
 
 def get_upi_name():
+    # Short name — long merchant names break some UPI apps
     return (getattr(settings, 'UPI_MERCHANT_NAME', None) or 'Flora').strip()
 
 
@@ -22,35 +23,31 @@ def _amount_str(amount):
     return f"{float(amount):.2f}"
 
 
-def build_upi_link(amount, order_ref, note=None):
+def build_upi_link(amount, order_ref, note=None, include_amount=True):
     """
-    Build a standard UPI deep link (NPCI pay intent).
-
-    Important: do NOT pre-percent-encode the whole query with urlencode and then
-    encode again for QR — that turns @ into %2540 and apps reject the payee.
-    Keep `pa` (UPI ID) raw; only encode name/note values that may have spaces.
+    NPCI UPI pay intent.
+    Keep pa (VPA) raw. Minimal params — fewer app failures.
     """
     pa = get_upi_id()
     pn = get_upi_name()
     am = _amount_str(amount)
-    tn = (note or f"Order {order_ref}")[:50]
+    tn = (note or str(order_ref))[:40]
 
-    # Raw @ in pa is required so single encoding (QR / browser) is correct
-    return (
-        "upi://pay"
-        f"?pa={pa}"
-        f"&pn={quote(pn, safe='')}"
-        f"&am={am}"
-        f"&cu=INR"
-        f"&tn={quote(tn, safe='')}"
-    )
+    parts = [
+        f"pa={pa}",
+        f"pn={quote(pn, safe='')}",
+        "cu=INR",
+    ]
+    if include_amount:
+        parts.append(f"am={am}")
+    if tn:
+        parts.append(f"tn={quote(tn, safe='')}")
+
+    return "upi://pay?" + "&".join(parts)
 
 
 def build_upi_qr_url(upi_link, size=280):
-    """
-    QR image that encodes the UPI string once.
-    Encode the full deep-link once for the image API query param.
-    """
+    """QR encodes the UPI string once (no double-encoding of @)."""
     return (
         "https://api.qrserver.com/v1/create-qr-code/"
         f"?size={size}x{size}&margin=8&data={quote(upi_link, safe='')}"
@@ -58,17 +55,9 @@ def build_upi_qr_url(upi_link, size=280):
 
 
 def build_gpay_link(amount, order_ref):
-    """Google Pay — try modern gpay:// first; tez:// as fallback is same query."""
     base = build_upi_link(amount, order_ref)
-    # Same query string as upi://pay?...
     query = base.split('?', 1)[1]
     return f"gpay://upi/pay?{query}"
-
-
-def build_gpay_tez_link(amount, order_ref):
-    base = build_upi_link(amount, order_ref)
-    query = base.split('?', 1)[1]
-    return f"tez://upi/pay?{query}"
 
 
 def build_phonepe_link(amount, order_ref):
@@ -84,10 +73,7 @@ def build_paytm_link(amount, order_ref):
 
 
 def build_order_whatsapp_url(order, request=None):
-    """
-    WhatsApp share for the shop.
-    Plain UPI ID + amount (never embed a fragile upi:// inside WA text).
-    """
+    """WhatsApp share for the shop — plain UPI ID, no fragile upi:// inside text."""
     order_id = f"FLORA{order.id}"
     total = float(order.get_total_cost())
     full_address = ", ".join(

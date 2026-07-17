@@ -46,6 +46,7 @@ for origin in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(','):
         CSRF_TRUSTED_ORIGINS.append(origin)
 # Common Render service URL for this project
 CSRF_TRUSTED_ORIGINS.append('https://floraecommerce.onrender.com')
+CSRF_TRUSTED_ORIGINS.append('https://florashopthrissur.onrender.com')
 
 # Application definition
 INSTALLED_APPS = [

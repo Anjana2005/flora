@@ -111,7 +111,7 @@ def checkout(request):
             address = request.POST.get('address', '').strip()
             city = request.POST.get('city', '').strip()
             postal = request.POST.get('postal', '').strip()
-            country = request.POST.get('country', 'India').strip() or 'India'
+            country = 'India'
 
             if not first_name or not phone or not address:
                 messages.error(request, 'Please fill name, phone and address.')

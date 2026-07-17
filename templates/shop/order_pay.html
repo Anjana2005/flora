@@ -147,16 +147,10 @@
         <p>Order <strong>{{ order_ref }}</strong></p>
         <div class="pay-amount">₹{{ total }}</div>
 
-        <div class="alert-info">
-            <strong>If the app says “money has not been debited”</strong> — that means
-            the payment <em>failed</em> or was cancelled. Your money is still with you.
-            Use the <strong>manual steps</strong> below (most reliable).
-        </div>
-
         <div class="qr-box">
             <img src="{{ qr_url }}" alt="UPI QR code for payment" id="upi-qr">
         </div>
-        <p class="hint">Scan this QR in GPay / PhonePe / Paytm / BHIM</p>
+        <p class="hint">Scan this QR with GPay / PhonePe / Paytm / BHIM</p>
 
         <div class="upi-id-box">
             Pay to UPI ID: <strong id="upi-id">{{ upi_id }}</strong><br>
@@ -170,25 +164,18 @@
         </div>
 
         <ol class="steps">
-            <li>Open <strong>GPay / PhonePe / Paytm</strong> on your phone</li>
-            <li>Pay to UPI: <strong>{{ upi_id }}</strong></li>
-            <li>Amount <strong>₹{{ total }}</strong> · Note: <strong>{{ order_ref }}</strong></li>
-            <li>Complete payment with UPI PIN</li>
-            <li>Come back here and tap <strong>Payment successful — confirm &amp; update stock</strong></li>
+            <li>Open <strong>GPay / PhonePe / Paytm</strong></li>
+            <li>Send money to: <strong>{{ upi_id }}</strong></li>
+            <li>Enter amount <strong>₹{{ total }}</strong></li>
+            <li>Add note: <strong>{{ order_ref }}</strong></li>
+            <li>Pay with UPI PIN</li>
+            <li>Return here and tap <strong>Payment successful — confirm &amp; update stock</strong></li>
         </ol>
 
-        <div class="alert-warn">
-            Deep-link buttons sometimes fail depending on the phone/app.
-            Manual pay to <strong>{{ upi_id }}</strong> always works if that UPI ID is active.
-            Test the ID in your own GPay: “Pay” → enter <strong>{{ upi_id }}</strong> —
-            if it says “invalid UPI”, the shop UPI ID must be updated.
-        </div>
-
-        <!-- Deep links (mobile); encoding fixed so @ is not double-escaped -->
-        <a class="pay-btn" href="{{ upi_link }}">Open default UPI app</a>
-        <a class="pay-btn gpay" href="{{ gpay_link }}">Open Google Pay</a>
-        <a class="pay-btn phonepe" href="{{ phonepe_link }}">Open PhonePe</a>
-        <a class="pay-btn paytm" href="{{ paytm_link }}">Open Paytm</a>
+        <a class="pay-btn" href="{{ upi_link }}">Pay with UPI app</a>
+        <a class="pay-btn gpay" href="{{ gpay_link }}">Google Pay</a>
+        <a class="pay-btn phonepe" href="{{ phonepe_link }}">PhonePe</a>
+        <a class="pay-btn paytm" href="{{ paytm_link }}">Paytm</a>
 
         <ul class="items">
             {% for item in items %}
