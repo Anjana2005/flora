@@ -1361,6 +1361,8 @@ def checkout(request):
 
             cart.clear()
             request.session['last_order_id'] = order.id
+            # Open WhatsApp with full order details after checkout
+            request.session['open_whatsapp_order'] = order.id
             return redirect('shop:order_pay', order_id=order.id)
         except Exception as e:
             messages.error(request, f'Error placing order: {str(e)}')
@@ -1369,7 +1371,7 @@ def checkout(request):
 
 
 def order_pay(request, order_id):
-    """Show working UPI payment options + QR after checkout."""
+    """Show UPI payment page; can auto-open WhatsApp with order details."""
     from .payments import (
         build_upi_link,
         build_upi_qr_url,
@@ -1387,6 +1389,17 @@ def order_pay(request, order_id):
     order_ref = f"FLORA{order.id}"
     total = order.get_total_cost()
     upi_link = build_upi_link(total, order_ref)
+    whatsapp_url = build_order_whatsapp_url(order, request, paid=order.paid)
+
+    # Auto-open WhatsApp once after placing order (product + order details)
+    auto_open_whatsapp = False
+    if request.session.get('open_whatsapp_order') == order.id:
+        auto_open_whatsapp = True
+        try:
+            del request.session['open_whatsapp_order']
+        except KeyError:
+            pass
+
     context = {
         'order': order,
         'order_ref': order_ref,
@@ -1400,7 +1413,8 @@ def order_pay(request, order_id):
         'phonepe_link': build_phonepe_link(total, order_ref),
         'paytm_link': build_paytm_link(total, order_ref),
         'qr_url': build_upi_qr_url(upi_link),
-        'whatsapp_url': build_order_whatsapp_url(order, request),
+        'whatsapp_url': whatsapp_url,
+        'auto_open_whatsapp': auto_open_whatsapp,
         'items': order.items.select_related('product').all(),
     }
     return render(request, 'shop/order_pay.html', context)
@@ -1421,6 +1435,8 @@ def order_confirm_paid(request, order_id):
             f'Thank you! Payment recorded for order FLORA{order.id}. '
             f'Stock updated for the selected size(s).',
         )
+        # Open WhatsApp again with PAID status + full order details
+        request.session['open_whatsapp_paid'] = order.id
     else:
         messages.info(request, 'This order is already marked as paid.')
 
@@ -1428,7 +1444,19 @@ def order_confirm_paid(request, order_id):
 
 
 def order_paid_success(request, order_id):
+    from .payments import build_order_whatsapp_url
+
     order = get_object_or_404(Order, id=order_id)
+    whatsapp_url = build_order_whatsapp_url(order, request, paid=True)
+
+    auto_open_whatsapp = False
+    if request.session.get('open_whatsapp_paid') == order.id:
+        auto_open_whatsapp = True
+        try:
+            del request.session['open_whatsapp_paid']
+        except KeyError:
+            pass
+
     return render(
         request,
         'shop/order_paid_success.html',
@@ -1437,6 +1465,8 @@ def order_paid_success(request, order_id):
             'order_ref': f'FLORA{order.id}',
             'total': order.get_total_cost(),
             'items': order.items.select_related('product').all(),
+            'whatsapp_url': whatsapp_url,
+            'auto_open_whatsapp': auto_open_whatsapp,
         },
     )
 

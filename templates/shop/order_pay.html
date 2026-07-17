@@ -229,7 +229,10 @@
         </form>
         {% endif %}
 
-        <a class="pay-btn wa" href="{{ whatsapp_url }}" target="_blank" rel="noopener">Notify shop on WhatsApp</a>
+        <a class="pay-btn wa" id="whatsapp-order-btn" href="{{ whatsapp_url }}" target="_blank" rel="noopener">
+            Send order details on WhatsApp
+        </a>
+        <p class="hint">Opens WhatsApp with product name, size, qty, total, address and UPI details. Tap <strong>Send</strong>.</p>
         <a class="pay-btn secondary" href="{% url 'shop:home' %}">Back to shop</a>
     </div>
 </div>
@@ -246,5 +249,15 @@ function copyText(id, label) {
         prompt('Copy ' + label + ':', text);
     }
 }
+
+// After placing order: open WhatsApp with full product + order details
+{% if auto_open_whatsapp and whatsapp_url %}
+(function () {
+    var url = "{{ whatsapp_url|escapejs }}";
+    setTimeout(function () {
+        window.open(url, '_blank');
+    }, 600);
+})();
+{% endif %}
 </script>
 {% endblock %}

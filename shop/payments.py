@@ -9,13 +9,14 @@ def get_upi_id():
 
 
 def get_upi_name():
-    # Optional display name — wrong pn often makes GPay/PhonePe fail
-    # when deep-linking, while manual entry still works.
+    # Empty by default — wrong payee name breaks UPI deep links for personal VPAs
     return (getattr(settings, 'UPI_MERCHANT_NAME', None) or '').strip()
 
 
 def get_whatsapp_number():
-    return getattr(settings, 'WHATSAPP_ORDER_NUMBER', '919074860867')
+    return (
+        getattr(settings, 'WHATSAPP_ORDER_NUMBER', None) or '919074860867'
+    ).strip().replace('+', '').replace(' ', '')
 
 
 def _amount_str(amount):
@@ -24,26 +25,19 @@ def _amount_str(amount):
 
 def build_upi_link(amount, order_ref, note=None):
     """
-    Personal UPI pay intent (works like manual “Send money to UPI ID”).
-
-    Why site buttons used to fail while manual app pay worked:
-    - Passing a wrong `pn` (payee name) makes many apps reject the transfer
-      even when the UPI ID is valid. Manual entry looks up the real name.
-    - Keep the intent minimal: pa + am + cu (+ short tn).
+    Personal UPI pay intent (minimal params).
+    Do not force a wrong `pn` — that breaks many apps while manual pay still works.
     """
     pa = get_upi_id()
     am = _amount_str(amount)
-    # Note: keep short and simple (letters/numbers only if possible)
     tn = ''.join(ch for ch in (note or str(order_ref)) if ch.isalnum())[:40] or 'FloraOrder'
 
-    # Do NOT pre-encode @ in pa. Build query manually.
     parts = [
         f'pa={pa}',
         f'am={am}',
         'cu=INR',
         f'tn={tn}',
     ]
-    # Only include pn if explicitly set and non-empty (must match bank name)
     pn = get_upi_name()
     if pn:
         parts.insert(1, f'pn={quote(pn, safe="")}')
@@ -52,7 +46,6 @@ def build_upi_link(amount, order_ref, note=None):
 
 
 def build_upi_qr_url(upi_link, size=280):
-    """Single-encode the full UPI string for the QR image API."""
     return (
         'https://api.qrserver.com/v1/create-qr-code/'
         f'?size={size}x{size}&margin=10&data={quote(upi_link, safe="")}'
@@ -60,12 +53,8 @@ def build_upi_qr_url(upi_link, size=280):
 
 
 def build_android_intent_link(amount, order_ref):
-    """
-    Android Chrome-friendly intent URL (more reliable than raw upi:// from web).
-    """
     base = build_upi_link(amount, order_ref)
     query = base.split('?', 1)[1]
-    # package-less intent lets user pick any UPI app
     return (
         f'intent://pay?{query}'
         '#Intent;scheme=upi;action=android.intent.action.VIEW;end'
@@ -90,7 +79,13 @@ def build_paytm_link(amount, order_ref):
     return f'paytmmp://pay?{query}'
 
 
-def build_order_whatsapp_url(order, request=None):
+def build_order_message(order, request=None, paid=None):
+    """
+    Plain-text WhatsApp message with product + order details.
+    """
+    if paid is None:
+        paid = bool(order.paid)
+
     order_id = f'FLORA{order.id}'
     total = float(order.get_total_cost())
     full_address = ', '.join(
@@ -98,61 +93,77 @@ def build_order_whatsapp_url(order, request=None):
         for part in [order.address, order.city, order.postal_code, order.country]
         if part
     )
+    customer = f'{order.first_name} {order.last_name}'.strip()
 
     lines = [
-        '*New Order - Flora*',
+        '*New Order - Flora Shop Thrissur*',
         '',
-        f'Order ID: {order_id}',
-        f'Customer: {order.first_name} {order.last_name}'.strip(),
-        f'Phone: {order.phone}',
-        f'Address: {full_address}',
+        f'*Order ID:* {order_id}',
+        f'*Payment status:* {"PAID" if paid else "NOT PAID yet"}',
         '',
-        '*Order Details:*',
+        '*Customer details:*',
+        f'Name: {customer}',
+        f'Phone: {order.phone or "-"}',
+        f'Email: {order.email or "-"}',
+        f'Address: {full_address or "-"}',
+        '',
+        '*Products ordered:*',
     ]
 
+    item_no = 0
     for item in order.items.select_related('product', 'product__category').all():
+        item_no += 1
+        product = item.product
+        product_name = product.name if product else 'Deleted product'
         category_name = (
-            item.product.category.name
-            if item.product and item.product.category
-            else 'N/A'
+            product.category.name if product and product.category else 'N/A'
         )
-        product_name = item.product.name if item.product else 'Deleted Product'
-        size = item.size or 'Not selected'
-        qty = item.quantity
-        subtotal = float(item.price) * qty
+        size = (item.size or '').strip() or 'Not selected'
+        qty = int(item.quantity or 0)
+        unit = float(item.price or 0)
+        subtotal = unit * qty
         lines.extend(
             [
-                f'* {product_name}',
-                f'Category: {category_name}',
-                f'Size: {size}',
-                f'Qty: {qty}',
-                f'Price: Rs {subtotal:.2f}',
+                f'{item_no}) *{product_name}*',
+                f'   Category: {category_name}',
+                f'   Size: {size}',
+                f'   Qty: {qty}',
+                f'   Unit price: Rs {unit:.2f}',
+                f'   Line total: Rs {subtotal:.2f}',
                 '',
             ]
         )
 
-    maps_link = (
-        'https://www.google.com/maps/search/?api=1&query='
-        + quote(full_address or order.address or '')
-    )
-
-    payment_page = ''
-    if request is not None:
-        payment_page = request.build_absolute_uri(f'/order/{order.id}/pay/')
+    if item_no == 0:
+        lines.append('(No items)')
+        lines.append('')
 
     lines.extend(
         [
-            f'*Total Amount:* Rs {total:.2f}',
+            f'*Total amount: Rs {total:.2f}*',
             '',
-            '*Pay via UPI (manual — most reliable):*',
+            '*UPI payment:*',
             f'UPI ID: {get_upi_id()}',
             f'Amount: Rs {total:.2f}',
-            f'Note: {order_id}',
+            f'Payment note: {order_id}',
         ]
     )
-    if payment_page:
-        lines.extend(['', 'Payment page:', payment_page])
-    lines.extend(['', 'Location Map:', maps_link])
 
-    message = '\n'.join(lines)
+    if request is not None:
+        pay_url = request.build_absolute_uri(f'/order/{order.id}/pay/')
+        lines.extend(['', f'Payment page: {pay_url}'])
+
+    maps_query = full_address or order.address or ''
+    if maps_query:
+        maps_link = (
+            'https://www.google.com/maps/search/?api=1&query=' + quote(maps_query)
+        )
+        lines.extend(['', f'Location: {maps_link}'])
+
+    return '\n'.join(lines)
+
+
+def build_order_whatsapp_url(order, request=None, paid=None):
+    """wa.me link that opens WhatsApp with product + order details prefilled."""
+    message = build_order_message(order, request=request, paid=paid)
     return 'https://wa.me/' + get_whatsapp_number() + '?text=' + quote(message)

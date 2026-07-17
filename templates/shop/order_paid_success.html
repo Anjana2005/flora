@@ -16,10 +16,11 @@
         font-weight: 700; padding: 0.5rem 1rem; border-radius: 999px; margin: 1rem 0;
     }
     .ok-btn {
-        display: inline-block; margin-top: 1rem; padding: 0.85rem 1.5rem;
+        display: inline-block; margin-top: 0.75rem; padding: 0.85rem 1.5rem;
         border-radius: 999px; background: linear-gradient(135deg, #F4A7B9, #E87A96);
         color: #fff; text-decoration: none; font-weight: 700;
     }
+    .ok-btn.wa { background: linear-gradient(135deg, #25D366, #128C7E); }
 </style>
 {% endblock %}
 
@@ -31,7 +32,7 @@
         <p>Order <strong>{{ order_ref }}</strong></p>
         <p>Amount: <strong>₹{{ total }}</strong></p>
         <p style="color:#666;margin-top:1rem;">
-            Admin panel now shows this order as <strong>Paid: Yes</strong>.
+            Admin panel shows this order as <strong>Paid: Yes</strong>.
             Stock for the ordered size(s) has been reduced.
         </p>
         <ul style="text-align:left;margin:1rem auto;max-width:320px;color:#5A3F4A;">
@@ -43,7 +44,22 @@
             </li>
             {% endfor %}
         </ul>
+        <a class="ok-btn wa" id="whatsapp-paid-btn" href="{{ whatsapp_url }}" target="_blank" rel="noopener">
+            Send paid order on WhatsApp
+        </a>
+        <br>
         <a class="ok-btn" href="{% url 'shop:home' %}">Back to shop</a>
     </div>
 </div>
+
+<script>
+{% if auto_open_whatsapp and whatsapp_url %}
+(function () {
+    var url = "{{ whatsapp_url|escapejs }}";
+    setTimeout(function () {
+        window.open(url, '_blank');
+    }, 500);
+})();
+{% endif %}
+</script>
 {% endblock %}
