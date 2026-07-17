@@ -1554,12 +1554,11 @@ def order_pay(request, order_id):
             rz_error = str(e)
             secure = False
 
-    # Pure UPI QR (money can debit) + site open URL (marks admin Paid)
+    # Pure UPI QR only — money via GPay/PhonePe. Does NOT mark Paid.
     payment = build_order_payment_qr(order)
     open_upi_url = reverse('shop:order_launch_payment', args=[order.id]) + (
         f'?method=scan&note={payment["order_ref"]}'
     )
-    mark_paid_url = reverse('shop:order_mark_paid_api', args=[order.id])
 
     context = {
         'order': order,
@@ -1574,7 +1573,6 @@ def order_pay(request, order_id):
         'upi_link': payment['upi_link'],
         'qr_url': payment['qr_url'],
         'open_upi_url': open_upi_url,
-        'mark_paid_url': mark_paid_url,
         'items': order.items.select_related('product').all(),
         'secure_payments': secure,
         'rz_error': rz_error,
@@ -1717,34 +1715,11 @@ def order_razorpay_webhook(request):
     return HttpResponse(status=200)
 
 
-def _force_order_paid(order, note_code=''):
-    """Always set paid=True for admin; never leave Paid: No after scanner use."""
-    from django.utils import timezone as dj_tz
-    from .payments import build_order_note_code
-
-    note = (note_code or build_order_note_code(order.id))[:64]
-    if not order.paid:
-        try:
-            order.mark_as_paid(payment_ref=note, payment_method='upi_scanner')
-        except Exception:
-            pass
-        order.refresh_from_db()
-    if not order.paid:
-        Order.objects.filter(pk=order.pk).update(
-            paid=True,
-            paid_at=dj_tz.now(),
-            payment_ref=note,
-            payment_method='upi_scanner',
-        )
-        order.refresh_from_db()
-    return order
-
-
 def order_launch_payment(request, order_id):
     """
-    Unique per-order scanner hit:
-    1) Force Paid: Yes in admin for THIS order
-    2) Open UPI with amount + order note (FLORA#) pre-filled
+    Open UPI app for this order (amount + FLORA# note only).
+    Does NOT mark Paid — opening the link is not a bank payment.
+    Paid only via Razorpay verify or staff "Mark as Paid" after money is received.
     """
     from .payments import (
         build_payment_confirmation_whatsapp_url,
@@ -1766,75 +1741,63 @@ def order_launch_payment(request, order_id):
             return HttpResponseRedirect(build_payment_confirmation_whatsapp_url(order, request))
         return redirect('shop:order_pay', order_id=order.id)
 
-    # Optional note must match this order number
     if given_note and given_note != expected_norm:
-        messages.error(request, f'Wrong scanner. This order is {expected_note}.')
+        messages.error(request, f'Wrong order note. This order is {expected_note}.')
         return redirect('shop:order_pay', order_id=order.id)
+
+    if order.paid:
+        return redirect('shop:order_paid_success', order_id=order.id)
 
     payment = build_order_payment_qr(order)
     note_code = payment.get('payment_note') or expected_note
     upi_link = payment.get('upi_link') or ''
     amount_str = payment.get('amount_str') or ''
 
-    # Always mark admin Paid before opening UPI
-    order = _force_order_paid(order, note_code)
-
+    # Open UPI only — leave paid=False until real money is confirmed
     if upi_link:
         return upi_app_response(
             upi_link,
             note_code=note_code,
             amount_str=amount_str,
             shop_upi=get_upi_id(),
-            already_paid=True,
+            already_paid=False,
         )
-    return redirect('shop:order_paid_success', order_id=order.id)
+    return redirect('shop:order_pay', order_id=order.id)
 
 
 def order_confirm_paid(request, order_id):
-    """Legacy URL — same as scanner: auto-mark paid + open success/WhatsApp."""
-    return redirect('shop:order_launch_payment', order_id=order_id)
+    """No public self-confirm — stay on payment page."""
+    return redirect('shop:order_pay', order_id=order_id)
 
 
+@login_required(login_url='shop:login')
 def order_mark_paid_api(request, order_id):
     """
-    Mark this order Paid: Yes in admin (UPI scanner / return from GPay).
-    GET or POST. Always forces paid=True so dashboard updates.
+    Staff-only: mark order paid (same as admin Mark as Paid).
+    Public users cannot mark paid without real payment / staff action.
     """
-    from django.http import JsonResponse, HttpResponse
-    from django.utils import timezone as dj_tz
-    from .payments import build_order_note_code
+    from django.http import JsonResponse
+
+    if not request.user.is_staff:
+        return JsonResponse({'ok': False, 'error': 'Staff only', 'paid': False}, status=403)
 
     order = get_object_or_404(Order, id=order_id)
-    note = build_order_note_code(order.id)
     already = bool(order.paid)
-
     if not order.paid:
+        from .payments import build_order_note_code
+        note = build_order_note_code(order.id)
         try:
-            order.mark_as_paid(payment_ref=note, payment_method='upi_scanner')
-        except Exception:
-            pass
+            order.mark_as_paid(payment_ref=note, payment_method='admin')
+        except Exception as e:
+            return JsonResponse({'ok': False, 'error': str(e), 'paid': False}, status=500)
         order.refresh_from_db()
 
-    # Hard guarantee — admin dashboard must show Paid even if stock step failed
-    if not order.paid:
-        Order.objects.filter(pk=order.pk).update(
-            paid=True,
-            paid_at=dj_tz.now(),
-            payment_ref=note[:64],
-            payment_method='upi_scanner',
-        )
-        order.refresh_from_db()
-
-    payload = {
+    return JsonResponse({
         'ok': True,
         'paid': bool(order.paid),
         'already': already,
-        'order_ref': note,
-    }
-    # sendBeacon often sends without Accept header — still return JSON
-    if request.headers.get('Accept', '').find('json') >= 0 or request.GET.get('fmt') == 'json':
-        return JsonResponse(payload)
-    return JsonResponse(payload)
+        'order_ref': f'FLORA{order.id}',
+    })
 
 
 def order_paid_success(request, order_id):

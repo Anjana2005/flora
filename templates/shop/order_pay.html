@@ -223,19 +223,17 @@
         </div>
         {% endif %}
 
-        <!-- Pure UPI QR (money) + auto admin Paid when you return / open UPI -->
+        <!-- Pure UPI QR — payment only; does NOT mark admin Paid -->
         <div class="scanner-section">
-            <h2><i class="fas fa-qrcode"></i> UPI scanner · {{ order_ref }}</h2>
+            <h2><i class="fas fa-qrcode"></i> UPI payment · {{ order_ref }}</h2>
             <p style="font-size:1.35rem;font-weight:900;color:#E87A96;margin:0.25rem 0 0.5rem;letter-spacing:0.04em;">
                 {{ order_ref }}
             </p>
-            <div id="paid-banner" style="display:none;background:#e8f5e9;color:#1b5e20;font-weight:800;padding:0.55rem 0.85rem;border-radius:999px;margin:0.5rem auto;">
-                Admin: Paid Yes ✓
-            </div>
             <p class="hint" style="margin-top:0;text-align:center;">
-                <strong>Best:</strong> tap <strong>Open UPI app &amp; set admin Paid</strong> (admin updates + payment opens).<br>
-                Or scan QR in GPay — when you leave/return to this page, admin becomes
-                <strong>Paid: Yes</strong> automatically.
+                Scan with <strong>GPay / PhonePe → Scan QR</strong> (real UPI code).<br>
+                Pay to <strong>{{ shop_upi_id }}</strong> · ₹{{ amount_str }} · note
+                <strong>{{ payment_note|default:order_ref }}</strong>.<br>
+                <strong>Opening UPI does not mark Paid</strong> — only real money does.
             </p>
             {% if qr_url %}
             <div class="qr-wrap" id="upi-qr-wrap">
@@ -250,7 +248,7 @@
             </div>
             {% if open_upi_url %}
             <a class="btn-pay" id="open-upi-btn" href="{{ open_upi_url }}" style="margin-top:0.85rem;">
-                Open UPI app &amp; set admin Paid
+                Open UPI app to pay
             </a>
             {% endif %}
             <button type="button" class="btn-secondary" id="copy-upi-btn" style="cursor:pointer;width:100%;font-family:inherit;margin-top:0.55rem;">
@@ -262,11 +260,12 @@
         </div>
 
         <div class="note">
-            <strong>Admin panel:</strong> After you pay with this order’s scanner, return to this page
-            (or tap <strong>Open UPI app &amp; set admin Paid</strong>). Then dashboard shows
-            <strong>Paid: Yes ✓</strong> for <strong>{{ order_ref }}</strong> only.<br><br>
-            <strong>Money:</strong> Use pure UPI QR inside GPay/PhonePe so the amount is debited.
-            Each order has its own note ({{ payment_note|default:order_ref }}).
+            <strong>Admin Paid: Yes</strong> only when:
+            (1) shop sees money for note <strong>{{ payment_note|default:order_ref }}</strong> and taps
+            <strong>Mark as Paid</strong>, or (2) Razorpay verifies (if keys are set).<br>
+            Tapping Open UPI / scanning alone does <strong>not</strong> mark paid (that was the bug).<br><br>
+            If money is not debited: pay manually in GPay to <strong>{{ shop_upi_id }}</strong>
+            with amount and note above.
         </div>
 
         <ul class="items">
@@ -308,97 +307,7 @@
         });
     }
 
-    // Auto-update admin Paid: Yes after UPI (reliable; works when leaving to GPay)
-    var markUrl = "{{ mark_paid_url|escapejs }}";
-    var banner = document.getElementById('paid-banner');
-    var paidDone = false;
-    var leftAt = 0;
-    var pageReady = Date.now();
-
-    function showPaidBanner() {
-        if (banner) banner.style.display = 'inline-block';
-    }
-
-    function markUrlWithSrc(reason) {
-        if (!markUrl) return '';
-        var sep = markUrl.indexOf('?') >= 0 ? '&' : '?';
-        return markUrl + sep + 'src=' + encodeURIComponent(reason || 'upi') + '&fmt=json';
-    }
-
-    function markPaidInAdmin(reason) {
-        if (paidDone || !markUrl) return;
-        paidDone = true;
-        var url = markUrlWithSrc(reason);
-        // sendBeacon survives navigation to UPI app (fetch often gets cancelled)
-        var sent = false;
-        try {
-            if (navigator.sendBeacon) {
-                sent = navigator.sendBeacon(url);
-            }
-        } catch (e) { sent = false; }
-        if (sent) {
-            showPaidBanner();
-            return;
-        }
-        fetch(url, {
-            method: 'GET',
-            credentials: 'same-origin',
-            headers: { 'Accept': 'application/json' },
-            keepalive: true
-        })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-            if (data && data.paid) showPaidBanner();
-            else paidDone = false;
-        })
-        .catch(function () { paidDone = false; });
-    }
-
-    // Open UPI → server marks paid; also beacon before navigate
-    var openBtn = document.getElementById('open-upi-btn');
-    if (openBtn) {
-        openBtn.addEventListener('click', function () {
-            leftAt = Date.now();
-            markPaidInAdmin('open_upi');
-        });
-    }
-
-    // User interacted with QR (about to scan) — mark when they leave / return
-    var qrWrap = document.getElementById('upi-qr-wrap');
-    if (qrWrap) {
-        function onQrIntent() {
-            leftAt = Date.now();
-        }
-        qrWrap.addEventListener('click', onQrIntent);
-        qrWrap.addEventListener('touchstart', onQrIntent, { passive: true });
-    }
-
-    // Left page for GPay (scan / pay) → mark admin Paid immediately
-    document.addEventListener('visibilitychange', function () {
-        if (document.hidden) {
-            leftAt = Date.now();
-            // Only after they have been on the page a moment (not first paint)
-            if ((Date.now() - pageReady) >= 2500) {
-                markPaidInAdmin('left_to_upi_app');
-            }
-            return;
-        }
-        if (leftAt && (Date.now() - leftAt) >= 3000) {
-            markPaidInAdmin('return_from_upi');
-        }
-    });
-
-    window.addEventListener('pagehide', function () {
-        if ((Date.now() - pageReady) >= 2500) {
-            markPaidInAdmin('pagehide');
-        }
-    });
-
-    window.addEventListener('focus', function () {
-        if (leftAt && (Date.now() - leftAt) >= 3000) {
-            markPaidInAdmin('window_focus');
-        }
-    });
+    // No auto mark-paid — opening UPI is not a bank confirmation
 })();
 </script>
 

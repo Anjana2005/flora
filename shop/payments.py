@@ -122,9 +122,9 @@ def upi_app_response(
     safe_amt = escape(str(amount_str or ''))
     safe_shop = escape(shop_upi or get_upi_id())
     paid_line = (
-        'Admin Paid: Yes ✓ · complete UPI below'
+        'Already paid in admin'
         if already_paid
-        else 'Complete payment in UPI app'
+        else 'Pay in UPI app — admin stays Paid: No until money is confirmed'
     )
     html = f"""<!DOCTYPE html>
 <html lang="en"><head>
@@ -151,7 +151,8 @@ def upi_app_response(
   Note auto-filled: <code>{safe_note}</code></p>
   <a class="btn" id="upi-btn" href="{safe_upi}">Open UPI &amp; pay</a>
   <a class="btn" href="{safe_intent}" style="background:#5A3F4A">Open on Android</a>
-  <p style="margin-top:1rem;font-size:.85rem">Finish payment in the app until it says <strong>successful</strong>. If it says money not debited, go back and <strong>scan the QR inside GPay</strong> (not only this browser button).</p>
+  <p style="margin-top:1rem;font-size:.85rem">Complete payment until GPay/PhonePe shows <strong>successful</strong>.
+  Opening this page does <strong>not</strong> mark the order paid. Shop marks Paid after money arrives (note <code>{safe_note}</code>).</p>
 </div>
 <script>
 (function(){{
