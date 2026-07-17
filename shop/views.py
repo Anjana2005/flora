@@ -1464,18 +1464,10 @@ def checkout(request):
 
 def order_pay(request, order_id):
     """
-    Payment page: unique QR/scanner for this order amount + ref.
-    Customer UPI collected at checkout (anti-spam).
+    Payment page: UPI scanner only.
+    QR changes every 2 minutes (unique tr/slot per order).
     """
-    from .payments import (
-        build_order_payment_qr,
-        build_android_intent_link,
-        build_gpay_link,
-        build_phonepe_link,
-        build_paytm_link,
-        get_upi_id,
-        _amount_str,
-    )
+    from .payments import build_order_payment_qr, get_upi_id
     from django.urls import reverse
 
     order = get_object_or_404(Order, id=order_id)
@@ -1483,41 +1475,61 @@ def order_pay(request, order_id):
     if order.paid:
         return redirect('shop:order_paid_success', order_id=order.id)
 
-    # QR encodes this HTTPS URL so scanning marks Paid in admin, then UPI + WhatsApp
+    # Scanner hits site URL → Paid: Yes + WhatsApp to shop
     scan_page_url = request.build_absolute_uri(
         reverse('shop:order_launch_payment', args=[order.id]) + '?method=scan'
     )
     payment = build_order_payment_qr(order, scan_page_url=scan_page_url)
-    order_ref = payment['order_ref']
-    total = order.get_total_cost()
-    upi_link = payment['upi_link']
 
     context = {
         'order': order,
-        'order_ref': order_ref,
+        'order_ref': payment['order_ref'],
         'payment_tr': payment['tr'],
-        'total': total,
+        'qr_slot': payment['slot'],
+        'seconds_left': payment['seconds_left'],
+        'rotate_seconds': payment['rotate_seconds'],
+        'total': order.get_total_cost(),
         'amount_str': payment['amount_str'],
         'shop_upi_id': payment['shop_upi_id'],
         'upi_id': get_upi_id(),
         'payer_upi_id': order.payer_upi_id,
-        'upi_link': upi_link,
-        'android_intent_link': build_android_intent_link(total, order_ref),
-        'gpay_link': build_gpay_link(total, order_ref),
-        'phonepe_link': build_phonepe_link(total, order_ref),
-        'paytm_link': build_paytm_link(total, order_ref),
-        # Unique QR — scanning hits site → Paid: Yes in dashboard
+        'upi_link': payment['upi_link'],
         'qr_url': payment['qr_url'],
         'scan_page_url': scan_page_url,
+        'qr_api_url': reverse('shop:order_payment_qr_api', args=[order.id]),
         'items': order.items.select_related('product').all(),
-        'pay_upi_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=upi',
-        'pay_android_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=android',
-        'pay_gpay_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=gpay',
-        'pay_phonepe_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=phonepe',
-        'pay_paytm_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=paytm',
-        'after_scan_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=after_scan',
     }
     return render(request, 'shop/order_pay.html', context)
+
+
+def order_payment_qr_api(request, order_id):
+    """JSON: fresh UPI scanner for this order (rotates every 2 minutes)."""
+    from .payments import build_order_payment_qr
+    from django.http import JsonResponse
+    from django.urls import reverse
+
+    order = get_object_or_404(Order, id=order_id)
+    if order.paid:
+        return JsonResponse({'paid': True, 'redirect': reverse('shop:order_paid_success', args=[order.id])})
+
+    scan_page_url = request.build_absolute_uri(
+        reverse('shop:order_launch_payment', args=[order.id]) + '?method=scan'
+    )
+    payment = build_order_payment_qr(order, scan_page_url=scan_page_url)
+    return JsonResponse(
+        {
+            'paid': False,
+            'order_ref': payment['order_ref'],
+            'tr': payment['tr'],
+            'slot': payment['slot'],
+            'seconds_left': payment['seconds_left'],
+            'rotate_seconds': payment['rotate_seconds'],
+            'amount_str': payment['amount_str'],
+            'shop_upi_id': payment['shop_upi_id'],
+            'upi_link': payment['upi_link'],
+            'qr_url': payment['qr_url'],
+        }
+    )
 
 
 def order_launch_payment(request, order_id):
