@@ -157,26 +157,33 @@ def upi_app_response(upi_link, note_code='', amount_str='', shop_upi='', already
 
 def build_upi_link(amount, order_ref, note=None, tr=None):
     """
-    Unique UPI pay intent for a specific order / QR time slot.
-    Always includes payment note (tn) + ref (tr) so bank apps show the order code.
-    """
-    pa = get_upi_id()
-    am = _amount_str(amount)
-    # Note shown in GPay/PhonePe remarks — order code by default
-    tn = sanitize_upi_note(note or order_ref, max_len=40)
-    tr_val = sanitize_upi_note(tr or order_ref, max_len=35).replace(' ', '')
+    Personal-UPI friendly pay intent.
 
+    Many GPay/PhonePe failures ("money has not been debited") come from extra
+    merchant fields (tr / wrong pn) on personal VPAs like name@axl.
+    Keep link minimal: pa + am + cu + short tn (order note).
+    """
+    pa = (get_upi_id() or '').strip().lower()
+    am = _amount_str(amount)
+    # Short remarks only (order code) — no spaces for best app compatibility
+    tn = sanitize_upi_note(note or order_ref, max_len=25).replace(' ', '')
+    if not tn:
+        tn = 'Flora'
+
+    # Minimal query — do NOT send tr/pn for personal UPI (breaks many banks)
     parts = [
         f'pa={pa}',
         f'am={am}',
         'cu=INR',
-        # tn = remarks / note the customer pays with
-        f'tn={quote(tn, safe="")}',
-        f'tr={quote(tr_val, safe="")}',
+        f'tn={tn}',
     ]
+    # Optional merchant display name only if explicitly configured
     pn = get_upi_name()
     if pn:
-        parts.insert(1, f'pn={quote(pn, safe="")}')
+        # Keep alphanumeric only; wrong name is worse than no name
+        pn_clean = sanitize_upi_note(pn, max_len=30).replace(' ', '')
+        if pn_clean:
+            parts.insert(1, f'pn={pn_clean}')
 
     return 'upi://pay?' + '&'.join(parts)
 

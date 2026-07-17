@@ -223,12 +223,13 @@
         </div>
         {% endif %}
 
-        <!-- Pure UPI scanner — amount + note only; never auto-paid -->
+        <!-- Pure UPI scanner — simple personal-UPI QR (works better than deep links) -->
         <div class="scanner-section">
-            <h2><i class="fas fa-qrcode"></i> UPI scanner (note included)</h2>
+            <h2><i class="fas fa-qrcode"></i> Pay with UPI scanner</h2>
             <p class="hint" style="margin-top:0;text-align:center;">
-                Scan with GPay / PhonePe — amount <strong>₹{{ amount_str }}</strong>
-                and note <strong>{{ payment_note|default:order_ref }}</strong> are set automatically.
+                Open <strong>GPay / PhonePe → Scan QR</strong> (not the browser camera if possible).
+                Amount <strong>₹{{ amount_str }}</strong> and note <strong>{{ payment_note|default:order_ref }}</strong>
+                should appear. Complete payment until you see <strong>success</strong>.
             </p>
             {% if qr_url %}
             <div class="qr-wrap">
@@ -236,29 +237,30 @@
             </div>
             {% endif %}
             <div class="manual-box">
-                <div>Shop UPI: <code>{{ shop_upi_id }}</code></div>
+                <div>Shop UPI: <code id="shop-upi-copy">{{ shop_upi_id }}</code></div>
                 <div>Amount: <code>₹{{ amount_str }}</code></div>
                 <div>Note / remarks: <code id="copy-note">{{ payment_note|default:order_ref }}</code></div>
-                <div style="margin-top:0.25rem;font-size:0.8rem;">Ref: <code>{{ payment_tr|default:order_ref }}</code></div>
             </div>
-            {% if open_upi_url %}
-            <a class="btn-pay" href="{{ open_upi_url }}" style="margin-top:0.85rem;">
-                Open UPI app (note {{ payment_note|default:order_ref }})
-            </a>
-            {% elif upi_link %}
-            <a class="btn-secondary" href="{{ upi_link }}">Open UPI app with note {{ payment_note|default:order_ref }}</a>
-            {% endif %}
+            <button type="button" class="btn-secondary" id="copy-upi-btn" style="cursor:pointer;width:100%;font-family:inherit;margin-top:0.55rem;">
+                Copy shop UPI ID
+            </button>
             <button type="button" class="btn-secondary" id="copy-note-btn" style="cursor:pointer;width:100%;font-family:inherit;">
                 Copy note code
             </button>
+            {% if open_upi_url %}
+            <a class="btn-pay" href="{{ open_upi_url }}" style="margin-top:0.85rem;">
+                Open UPI app
+            </a>
+            {% endif %}
         </div>
 
         <div class="note">
-            <strong>Pay to:</strong> <code>{{ shop_upi_id }}</code><br>
-            <strong>Note code:</strong> <strong>{{ payment_note|default:order_ref }}</strong><br>
-            <strong>Important:</strong> Scanning or opening UPI does <strong>not</strong> set admin to Paid.
-            Paid becomes Yes only after <strong>real money</strong> is confirmed (Razorpay) or the shop
-            taps <strong>Mark as Paid</strong> in admin after checking the UPI/bank app.
+            <strong>If the app says money was not debited:</strong><br>
+            1) Do not use the browser link again — pay manually in GPay/PhonePe:<br>
+            &nbsp;&nbsp;Send to <strong>{{ shop_upi_id }}</strong> · ₹{{ amount_str }} · note <strong>{{ payment_note|default:order_ref }}</strong><br>
+            2) Confirm the UPI ID is active in your bank app (send ₹1 to yourself test if needed).<br>
+            3) Use <strong>Scan QR</strong> inside GPay/PhonePe, not only phone camera.<br><br>
+            Admin stays <strong>Paid: No</strong> until money is really received and shop marks Paid.
         </div>
 
         <ul class="items">
@@ -275,18 +277,28 @@
 
 <script>
 (function () {
-    var btn = document.getElementById('copy-note-btn');
-    var code = (document.getElementById('copy-note') || {}).textContent || '{{ payment_note|default:order_ref|escapejs }}';
-    code = (code || '').trim();
-    if (btn && code) {
-        btn.addEventListener('click', function () {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(code).then(function () {
-                    btn.textContent = 'Note copied: ' + code;
-                });
-            } else {
-                prompt('Copy note code:', code);
-            }
+    function copyText(text, btn, okLabel) {
+        text = (text || '').trim();
+        if (!text) return;
+        function done() { if (btn) btn.textContent = okLabel; }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(done).catch(function () { prompt('Copy:', text); });
+        } else {
+            prompt('Copy:', text);
+        }
+    }
+    var noteBtn = document.getElementById('copy-note-btn');
+    var note = (document.getElementById('copy-note') || {}).textContent || '{{ payment_note|default:order_ref|escapejs }}';
+    if (noteBtn) {
+        noteBtn.addEventListener('click', function () {
+            copyText(note, noteBtn, 'Note copied: ' + (note || '').trim());
+        });
+    }
+    var upiBtn = document.getElementById('copy-upi-btn');
+    var upi = (document.getElementById('shop-upi-copy') || {}).textContent || '{{ shop_upi_id|escapejs }}';
+    if (upiBtn) {
+        upiBtn.addEventListener('click', function () {
+            copyText(upi, upiBtn, 'UPI copied: ' + (upi || '').trim());
         });
     }
 })();
