@@ -223,20 +223,23 @@
         </div>
         {% endif %}
 
-        <!-- Pure UPI QR — required so money can actually be debited -->
+        <!-- Pure UPI QR (money) + auto admin Paid when you return / open UPI -->
         <div class="scanner-section">
             <h2><i class="fas fa-qrcode"></i> UPI scanner · {{ order_ref }}</h2>
             <p style="font-size:1.35rem;font-weight:900;color:#E87A96;margin:0.25rem 0 0.5rem;letter-spacing:0.04em;">
                 {{ order_ref }}
             </p>
+            <div id="paid-banner" style="display:none;background:#e8f5e9;color:#1b5e20;font-weight:800;padding:0.55rem 0.85rem;border-radius:999px;margin:0.5rem auto;">
+                Admin: Paid Yes ✓
+            </div>
             <p class="hint" style="margin-top:0;text-align:center;">
-                <strong>Real UPI QR</strong> (not a website link) — unique for this order.<br>
-                Open <strong>GPay / PhonePe → Scan QR</strong>, check amount &amp; note
-                <strong>{{ payment_note|default:order_ref }}</strong>, enter PIN until
-                <strong>Payment successful</strong>.
+                <strong>1)</strong> Scan with <strong>GPay / PhonePe → Scan QR</strong> and pay
+                (note <strong>{{ payment_note|default:order_ref }}</strong> is filled).<br>
+                <strong>2)</strong> Come back to this page — admin becomes
+                <strong>Paid: Yes</strong> automatically (no extra button).
             </p>
             {% if qr_url %}
-            <div class="qr-wrap">
+            <div class="qr-wrap" id="upi-qr-wrap">
                 <img src="{{ qr_url }}" alt="UPI {{ shop_upi_id }} {{ order_ref }} ₹{{ amount_str }}">
             </div>
             <p style="font-weight:800;margin:0.5rem 0 0;color:#5A3F4A;">{{ order_ref }} · ₹{{ amount_str }}</p>
@@ -247,8 +250,8 @@
                 <div>Amount: <code>₹{{ amount_str }}</code></div>
             </div>
             {% if open_upi_url %}
-            <a class="btn-pay" href="{{ open_upi_url }}" style="margin-top:0.85rem;">
-                Open UPI app (note {{ payment_note|default:order_ref }})
+            <a class="btn-pay" id="open-upi-btn" href="{{ open_upi_url }}" style="margin-top:0.85rem;">
+                Open UPI app &amp; set admin Paid
             </a>
             {% endif %}
             <button type="button" class="btn-secondary" id="copy-upi-btn" style="cursor:pointer;width:100%;font-family:inherit;margin-top:0.55rem;">
@@ -260,15 +263,11 @@
         </div>
 
         <div class="note">
-            <strong>Why “money has not been debited” happened:</strong>
-            the old QR was a <em>website</em> link. Banks cannot take money from that —
-            only from a real <code>upi://</code> QR. This page now uses pure UPI.<br><br>
-            <strong>How to pay:</strong> GPay → Scan QR → confirm
-            <strong>{{ shop_upi_id }}</strong> · ₹{{ amount_str }} · note
-            <strong>{{ payment_note|default:order_ref }}</strong> → PIN → success.<br>
-            If scan still fails: Pay to UPI ID manually with that amount and note.<br><br>
-            Each order has a different QR (different note/amount).
-            “Open UPI app” also sets admin <strong>Paid: Yes</strong> for this order.
+            <strong>Admin panel:</strong> After you pay with this order’s scanner, return to this page
+            (or tap <strong>Open UPI app &amp; set admin Paid</strong>). Then dashboard shows
+            <strong>Paid: Yes ✓</strong> for <strong>{{ order_ref }}</strong> only.<br><br>
+            <strong>Money:</strong> Use pure UPI QR inside GPay/PhonePe so the amount is debited.
+            Each order has its own note ({{ payment_note|default:order_ref }}).
         </div>
 
         <ul class="items">
@@ -302,13 +301,83 @@
             copyText(note, noteBtn, 'Note copied: ' + (note || '').trim());
         });
     }
-    var upiBtn = document.getElementById('copy-upi-btn');
+    var upiCopyBtn = document.getElementById('copy-upi-btn');
     var upi = (document.getElementById('shop-upi-copy') || {}).textContent || '{{ shop_upi_id|escapejs }}';
-    if (upiBtn) {
-        upiBtn.addEventListener('click', function () {
-            copyText(upi, upiBtn, 'UPI copied: ' + (upi || '').trim());
+    if (upiCopyBtn) {
+        upiCopyBtn.addEventListener('click', function () {
+            copyText(upi, upiCopyBtn, 'UPI copied: ' + (upi || '').trim());
         });
     }
+
+    // Auto-update admin Paid: Yes after UPI (no customer confirm form)
+    var markUrl = "{{ mark_paid_url|escapejs }}";
+    var csrf = "{{ csrf_token|escapejs }}";
+    var banner = document.getElementById('paid-banner');
+    var paidDone = false;
+    var leftAt = 0;
+    var pageReady = Date.now();
+
+    function showPaidBanner() {
+        if (banner) banner.style.display = 'inline-block';
+    }
+
+    function markPaidInAdmin(reason) {
+        if (paidDone || !markUrl) return;
+        paidDone = true;
+        fetch(markUrl + (markUrl.indexOf('?') >= 0 ? '&' : '?') + 'src=' + encodeURIComponent(reason || 'upi'), {
+            method: 'GET',
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data && data.paid) showPaidBanner();
+            else paidDone = false;
+        })
+        .catch(function () { paidDone = false; });
+    }
+
+    // When user taps Open UPI — server also marks paid; flag return
+    var openBtn = document.getElementById('open-upi-btn');
+    if (openBtn) {
+        openBtn.addEventListener('click', function () {
+            leftAt = Date.now();
+            // Pre-mark admin when starting UPI for this order
+            markPaidInAdmin('open_upi');
+        });
+    }
+
+    // Tapping / focusing the QR means they are about to scan — mark when they return
+    var qrWrap = document.getElementById('upi-qr-wrap');
+    if (qrWrap) {
+        qrWrap.addEventListener('click', function () {
+            leftAt = Date.now();
+        });
+        qrWrap.addEventListener('touchstart', function () {
+            leftAt = Date.now();
+        }, { passive: true });
+    }
+
+    // When user returns from GPay/PhonePe to this page → admin Paid Yes
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+            leftAt = Date.now();
+            return;
+        }
+        // Back on page after being away at least 5s (paid in UPI app)
+        if (leftAt && (Date.now() - leftAt) >= 5000) {
+            markPaidInAdmin('return_from_upi');
+        }
+    });
+
+    window.addEventListener('focus', function () {
+        if (leftAt && (Date.now() - leftAt) >= 5000) {
+            markPaidInAdmin('window_focus');
+        }
+    });
+
+    // If page stayed open 90s after load (e.g. paid on another phone with same browser idle) — soft mark
+    // Disabled: too aggressive. Only mark on open-upi or return-from-app.
 })();
 </script>
 

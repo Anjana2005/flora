@@ -1554,12 +1554,12 @@ def order_pay(request, order_id):
             rz_error = str(e)
             secure = False
 
-    # Always pure UPI QR (money can debit). Unique note per order.
+    # Pure UPI QR (money can debit) + site open URL (marks admin Paid)
     payment = build_order_payment_qr(order)
-    # Open via site: auto-mark this order Paid, then open same UPI link
     open_upi_url = reverse('shop:order_launch_payment', args=[order.id]) + (
         f'?method=scan&note={payment["order_ref"]}'
     )
+    mark_paid_url = reverse('shop:order_mark_paid_api', args=[order.id])
 
     context = {
         'order': order,
@@ -1574,6 +1574,7 @@ def order_pay(request, order_id):
         'upi_link': payment['upi_link'],
         'qr_url': payment['qr_url'],
         'open_upi_url': open_upi_url,
+        'mark_paid_url': mark_paid_url,
         'items': order.items.select_related('product').all(),
         'secure_payments': secure,
         'rz_error': rz_error,
@@ -1786,6 +1787,43 @@ def order_launch_payment(request, order_id):
 def order_confirm_paid(request, order_id):
     """Legacy URL — same as scanner: auto-mark paid + open success/WhatsApp."""
     return redirect('shop:order_launch_payment', order_id=order_id)
+
+
+def order_mark_paid_api(request, order_id):
+    """
+    JSON: mark this order Paid: Yes in admin (used after UPI pay / return to page).
+    GET or POST. No customer form — silent update for admin dashboard.
+    """
+    from django.http import JsonResponse
+    from .payments import build_order_note_code
+
+    order = get_object_or_404(Order, id=order_id)
+    note = build_order_note_code(order.id)
+
+    if order.paid:
+        return JsonResponse({'ok': True, 'paid': True, 'already': True, 'order_ref': note})
+
+    try:
+        order.mark_as_paid(payment_ref=note, payment_method='upi_scanner')
+    except Exception:
+        pass
+    order.refresh_from_db()
+    if not order.paid:
+        from django.utils import timezone as dj_tz
+        Order.objects.filter(pk=order.pk).update(
+            paid=True,
+            paid_at=dj_tz.now(),
+            payment_ref=note[:64],
+            payment_method='upi_scanner',
+        )
+        order.refresh_from_db()
+
+    return JsonResponse({
+        'ok': True,
+        'paid': bool(order.paid),
+        'already': False,
+        'order_ref': note,
+    })
 
 
 def order_paid_success(request, order_id):
