@@ -1534,31 +1534,40 @@ def order_payment_qr_api(request, order_id):
 
 def order_launch_payment(request, order_id):
     """
-    Scanner / pay button:
-    1) Mark Paid=Yes in admin + reduce stock
-    2) Redirect the browser directly to shop WhatsApp with order details
+    Called when the unique order UPI scanner is scanned (or pay link opened).
+    Always marks Paid=Yes in admin + reduces stock, then opens shop WhatsApp.
     """
     from .payments import (
         build_payment_confirmation_whatsapp_url,
+        build_order_payment_qr,
         is_valid_upi_id,
     )
     from django.http import HttpResponseRedirect
 
     order = get_object_or_404(Order, id=order_id)
+    method = (request.GET.get('method') or 'scan').lower()
 
-    if not is_valid_upi_id(order.payer_upi_id):
-        messages.error(
-            request,
-            'Your UPI ID is missing. Please place the order again with your UPI ID in the textarea.',
-        )
-        return redirect('shop:order_pay', order_id=order.id)
-
+    # Mark Paid in admin as soon as this order's scanner/pay link is used
     if not order.paid:
-        order.mark_as_paid(payer_upi_id=order.payer_upi_id)
+        payer = (order.payer_upi_id or '').strip().lower()
+        if not is_valid_upi_id(payer):
+            payer = 'via-scanner'
+        order.mark_as_paid(payer_upi_id=payer)
     order.refresh_from_db()
 
-    # Go straight to shop WhatsApp (no intermediate page)
+    # Ensure paid stuck in DB (admin dashboard reads this)
+    if not order.paid:
+        Order.objects.filter(pk=order.pk).update(paid=True)
+        order.refresh_from_db()
+
     whatsapp_url = build_payment_confirmation_whatsapp_url(order, request)
+
+    # Optional: still offer UPI deep link only if client wants method=upi
+    # Default after scanner: go directly to shop WhatsApp
+    if method in ('upi', 'gpay', 'phonepe', 'paytm', 'android', 'scan'):
+        # For scan: paid is set; go WhatsApp so shop is notified and admin shows Paid
+        return HttpResponseRedirect(whatsapp_url)
+
     return HttpResponseRedirect(whatsapp_url)
 
 

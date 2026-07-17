@@ -161,7 +161,13 @@
             </div>
 
             <div style="background: var(--bg-light); padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem;">
-                <h3 style="color: var(--text-dark); margin-bottom: 1rem;">Recent orders — paid or not</h3>
+                <h3 style="color: var(--text-dark); margin-bottom: 1rem;">
+                    Recent orders — paid or not
+                    <a href="{% url 'shop:admin_dashboard' %}" style="font-size:0.85rem;font-weight:600;margin-left:0.5rem;">Refresh</a>
+                </h3>
+                <p style="font-size:0.9rem;color:#666;margin:0 0 0.75rem;">
+                    When a customer scans the order UPI QR, status becomes <strong>Paid: Yes ✓</strong> here.
+                </p>
                 <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;">
                     <thead>
                         <tr style="text-align:left;border-bottom:2px solid #eee;">
