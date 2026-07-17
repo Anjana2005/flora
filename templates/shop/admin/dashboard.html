@@ -173,6 +173,8 @@
                         <tr style="text-align:left;border-bottom:2px solid #eee;">
                             <th style="padding:0.6rem;">Order</th>
                             <th style="padding:0.6rem;">Customer</th>
+                            <th style="padding:0.6rem;">Placed</th>
+                            <th style="padding:0.6rem;">Confirmed</th>
                             <th style="padding:0.6rem;">Paid?</th>
                             <th style="padding:0.6rem;">WhatsApp</th>
                             <th style="padding:0.6rem;"></th>
@@ -183,6 +185,20 @@
                         <tr style="border-bottom:1px solid #f1f1f1;">
                             <td style="padding:0.6rem;">#FLORA{{ order.id }}</td>
                             <td style="padding:0.6rem;">{{ order.first_name }} {{ order.last_name }}</td>
+                            <td style="padding:0.6rem;white-space:nowrap;font-size:0.9rem;">
+                                {{ order.created_at|date:"d M Y" }}<br>
+                                <strong>{{ order.created_at|date:"h:i A" }}</strong>
+                                <span style="color:#999;font-size:0.8rem;">IST</span>
+                            </td>
+                            <td style="padding:0.6rem;white-space:nowrap;font-size:0.9rem;">
+                                {% if order.confirmed_at %}
+                                {{ order.confirmed_at|date:"d M Y" }}<br>
+                                <strong style="color:#1b5e20;">{{ order.confirmed_at|date:"h:i A" }}</strong>
+                                <span style="color:#999;font-size:0.8rem;">IST</span>
+                                {% else %}
+                                <span style="color:#999;">—</span>
+                                {% endif %}
+                            </td>
                             <td style="padding:0.6rem;">
                                 {% if order.paid %}
                                 <span style="background:#e8f5e9;color:#1b5e20;font-weight:800;padding:0.25rem 0.55rem;border-radius:999px;">Paid: Yes ✓</span>
@@ -205,7 +221,7 @@
                             <td style="padding:0.6rem;"><a href="{% url 'shop:admin_order_detail' id=order.id %}">View</a></td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="5" style="padding:0.8rem;">No orders yet.</td></tr>
+                        <tr><td colspan="7" style="padding:0.8rem;">No orders yet.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>

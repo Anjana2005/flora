@@ -65,6 +65,8 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     paid = models.BooleanField(default=False)
+    # When payment was confirmed (admin shows this as "Confirmed at")
+    paid_at = models.DateTimeField(null=True, blank=True)
     # Customer's UPI ID used to confirm payment (anti-spam; not auto on pay-click)
     payer_upi_id = models.CharField(max_length=100, blank=True, default='')
     payment_ref = models.CharField(
@@ -73,6 +75,15 @@ class Order(models.Model):
         default='',
         help_text='Optional UTR / transaction reference',
     )
+
+    @property
+    def confirmed_at(self):
+        """Time payment was confirmed; falls back for older orders."""
+        if self.paid_at:
+            return self.paid_at
+        if self.paid:
+            return self.updated_at or self.created_at
+        return None
 
     class Meta:
         ordering = ['-created_at']
@@ -123,12 +134,14 @@ class Order(models.Model):
                 product.save(update_fields=['stock'])
 
             order.paid = True
+            order.paid_at = timezone.now()
             if payer_upi_id:
                 order.payer_upi_id = payer_upi_id[:100]
             if payment_ref:
                 order.payment_ref = payment_ref[:64]
-            order.save(update_fields=['paid', 'payer_upi_id', 'payment_ref'])
+            order.save(update_fields=['paid', 'paid_at', 'payer_upi_id', 'payment_ref'])
             self.paid = True
+            self.paid_at = order.paid_at
             self.payer_upi_id = order.payer_upi_id
             self.payment_ref = order.payment_ref
             return True

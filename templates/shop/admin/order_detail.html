@@ -17,7 +17,7 @@
         <p><strong>Customer:</strong> {{ order.first_name }} {{ order.last_name }} &mdash; {{ order.email }}</p>
         <p><strong>Phone:</strong> {{ order.phone }}</p>
         <p><strong>Address:</strong> {{ order.address }}, {{ order.city }}, {{ order.postal_code }}, {{ order.country }}</p>
-        <p><strong>Placed:</strong> {{ order.created_at|date:"Y-m-d H:i" }}</p>
+        <p><strong>Placed:</strong> {{ order.created_at|date:"d M Y, h:i A" }} <span style="color:#999;">IST</span></p>
         <p><strong>Paid:</strong>
             {% if order.paid %}
                 <span style="color:green;font-weight:700;font-size:1.1rem;">Yes ✓</span>
@@ -25,6 +25,12 @@
                 <span style="color:#d9534f;font-weight:700;font-size:1.1rem;">No</span>
             {% endif %}
         </p>
+        {% if order.confirmed_at %}
+        <p><strong>Confirmed at:</strong>
+            <span style="color:#1b5e20;font-weight:800;">{{ order.confirmed_at|date:"d M Y, h:i A" }}</span>
+            <span style="color:#999;">IST (India)</span>
+        </p>
+        {% endif %}
         {% if order.paid %}
         <p><strong>Customer UPI (payer):</strong> {{ order.payer_upi_id|default:"—" }}</p>
         <p><strong>UTR / ref:</strong> {{ order.payment_ref|default:"—" }}</p>

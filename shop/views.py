@@ -1555,8 +1555,10 @@ def order_launch_payment(request, order_id):
         order.mark_as_paid(payer_upi_id=payer)
         order.refresh_from_db()
     if not order.paid:
+        from django.utils import timezone as dj_tz
         Order.objects.filter(pk=order.pk).update(
             paid=True,
+            paid_at=dj_tz.now(),
             payer_upi_id=(order.payer_upi_id or 'via-scanner')[:100],
         )
         order.refresh_from_db()
