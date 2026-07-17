@@ -112,7 +112,11 @@ def upi_app_response(upi_link, note_code='', amount_str='', shop_upi='', already
     safe_note = escape(note_code or '')
     safe_amt = escape(str(amount_str or ''))
     safe_shop = escape(shop_upi or get_upi_id())
-    paid_line = 'Admin: Paid Yes ✓' if already_paid else 'Complete payment in UPI'
+    paid_line = (
+        'Admin: Paid Yes ✓'
+        if already_paid
+        else 'Not paid yet — complete UPI transfer'
+    )
     html = f"""<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="utf-8">
@@ -234,7 +238,8 @@ def build_order_payment_qr(order, size=280, scan_page_url=None, slot=None):
     tr = build_payment_ref(order.id, f'S{slot}')
     upi_link = build_upi_link(amount, order_ref, note=payment_note, tr=tr)
 
-    # Site URL in QR → order-specific scanner marks Paid, then opens UPI with note
+    # Prefer pure UPI in QR so GPay pays without hitting the website
+    # (site cannot know bank success; admin must not auto-mark Paid from a link)
     if scan_page_url:
         sep = '&' if '?' in scan_page_url else '?'
         qr_payload = f'{scan_page_url}{sep}note={quote(payment_note, safe="")}&slot={slot}'

@@ -1466,10 +1466,10 @@ def checkout(request):
 
 def order_pay(request, order_id):
     """
-    Payment page: UPI scanner to flora1101@axl with order note code.
-    Using this order's scanner marks Paid: Yes, then opens UPI with the note.
+    Payment page: UPI QR to flora1101@axl with order note code.
+    Opening/scanning does NOT mark Paid — only real Razorpay success or admin mark.
     """
-    from .payments import build_order_payment_qr, get_upi_id, _amount_str
+    from .payments import build_order_payment_qr, get_upi_id
     from .secure_payments import razorpay_configured, create_razorpay_order
     from django.urls import reverse
 
@@ -1488,11 +1488,11 @@ def order_pay(request, order_id):
             rz_error = str(e)
             secure = False
 
-    # Scanner hits pay-now → Paid Yes for this order note, then UPI app
-    scan_page_url = request.build_absolute_uri(
+    # Pure UPI QR (amount + note) — does not hit site, does not mark paid
+    payment = build_order_payment_qr(order, scan_page_url=None)
+    open_upi_url = request.build_absolute_uri(
         reverse('shop:order_launch_payment', args=[order.id]) + '?method=scan'
     )
-    payment = build_order_payment_qr(order, scan_page_url=scan_page_url)
 
     context = {
         'order': order,
@@ -1506,7 +1506,7 @@ def order_pay(request, order_id):
         'payer_upi_id': order.payer_upi_id,
         'upi_link': payment['upi_link'],
         'qr_url': payment['qr_url'],
-        'scan_page_url': scan_page_url,
+        'open_upi_url': open_upi_url,
         'items': order.items.select_related('product').all(),
         'secure_payments': secure,
         'rz_error': rz_error,
@@ -1651,10 +1651,9 @@ def order_razorpay_webhook(request):
 
 def order_launch_payment(request, order_id):
     """
-    Order-specific UPI scanner path:
-    1) Confirm note code matches this order (FLORA#)
-    2) Mark Paid: Yes in admin + stock
-    3) Open UPI to flora1101@axl with that note (HTML bridge — not 302 to upi://)
+    Open UPI app for this order (amount + note code).
+    Does NOT mark Paid — bank/UPI apps never notify this free site.
+    Paid only via verified Razorpay or staff "Mark as Paid" in admin.
     """
     from .payments import (
         build_payment_confirmation_whatsapp_url,
@@ -1668,65 +1667,35 @@ def order_launch_payment(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     method = (request.GET.get('method') or 'scan').lower()
     expected_note = build_order_note_code(order.id)
-    # Optional note from scanner URL — must match this order
-    given_note = (request.GET.get('note') or '').strip().upper().replace(' ', '')
-    expected_norm = expected_note.upper().replace(' ', '')
 
-    if order.paid and method in ('wa', 'whatsapp'):
-        return HttpResponseRedirect(build_payment_confirmation_whatsapp_url(order, request))
-
+    # WhatsApp notify only after already paid (never mark paid here)
     if method in ('wa', 'whatsapp'):
-        if not order.paid:
-            order.mark_as_paid(
-                payment_ref=expected_note,
-                payment_method='upi_scanner',
-            )
-            order.refresh_from_db()
-        return HttpResponseRedirect(build_payment_confirmation_whatsapp_url(order, request))
-
-    # Reject wrong note code if someone tampers with the URL
-    if given_note and given_note != expected_norm and not given_note.endswith(expected_norm):
-        messages.error(
+        if order.paid:
+            return HttpResponseRedirect(build_payment_confirmation_whatsapp_url(order, request))
+        messages.info(
             request,
-            f'Wrong payment note. This order needs note code {expected_note}.',
+            'Pay first with UPI. Admin shows Paid only after money is confirmed.',
         )
         return redirect('shop:order_pay', order_id=order.id)
+
+    if order.paid:
+        return redirect('shop:order_paid_success', order_id=order.id)
 
     payment = build_order_payment_qr(order)
     note_code = payment.get('payment_note') or expected_note
     upi_link = payment.get('upi_link') or ''
     amount_str = payment.get('amount_str') or ''
 
-    # Mark Paid: Yes for this order's scanner + note code
-    if not order.paid:
-        try:
-            order.mark_as_paid(
-                payment_ref=note_code,
-                payment_method='upi_scanner',
-            )
-        except Exception:
-            pass
-        order.refresh_from_db()
-    if not order.paid:
-        from django.utils import timezone as dj_tz
-        Order.objects.filter(pk=order.pk).update(
-            paid=True,
-            paid_at=dj_tz.now(),
-            payment_ref=note_code[:64],
-            payment_method='upi_scanner',
-        )
-        order.refresh_from_db()
-
-    # Do NOT use HttpResponseRedirect(upi://…) — Django blocks it with 400 Bad Request
+    # Open UPI only — leave paid=False until real money / admin
     if upi_link:
         return upi_app_response(
             upi_link,
             note_code=note_code,
             amount_str=amount_str,
             shop_upi=get_upi_id(),
-            already_paid=bool(order.paid),
+            already_paid=False,
         )
-    return redirect('shop:order_paid_success', order_id=order.id)
+    return redirect('shop:order_pay', order_id=order.id)
 
 
 def order_confirm_paid(request, order_id):
