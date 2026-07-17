@@ -67,13 +67,22 @@ class Order(models.Model):
     paid = models.BooleanField(default=False)
     # When payment was confirmed (admin shows this as "Confirmed at")
     paid_at = models.DateTimeField(null=True, blank=True)
-    # Customer's UPI ID used to confirm payment (anti-spam; not auto on pay-click)
+    # Customer's UPI ID (optional note)
     payer_upi_id = models.CharField(max_length=100, blank=True, default='')
     payment_ref = models.CharField(
         max_length=64,
         blank=True,
         default='',
-        help_text='Optional UTR / transaction reference',
+        help_text='UTR / Razorpay payment id',
+    )
+    # Secure gateway (Razorpay) — paid only after signature verify
+    razorpay_order_id = models.CharField(max_length=64, blank=True, default='')
+    razorpay_payment_id = models.CharField(max_length=64, blank=True, default='')
+    payment_method = models.CharField(
+        max_length=20,
+        blank=True,
+        default='',
+        help_text='razorpay | admin | upi_manual',
     )
 
     @property
@@ -94,12 +103,17 @@ class Order(models.Model):
     def get_total_cost(self):
         return sum(item.price * item.quantity for item in self.items.all())
 
-    def mark_as_paid(self, payer_upi_id='', payment_ref=''):
+    def mark_as_paid(
+        self,
+        payer_upi_id='',
+        payment_ref='',
+        payment_method='',
+        razorpay_payment_id='',
+        razorpay_order_id='',
+    ):
         """
-        ONLY path that reduces stock. Call after customer submits their UPI ID.
-        - Saves payer UPI (who paid)
-        - Sets paid=Yes for admin
-        - Decreases size/product stock once
+        ONLY path that reduces stock.
+        Call only after verified Razorpay payment, or trusted admin action.
         Returns True if newly marked paid, False if already paid.
         """
         from django.db import transaction
@@ -139,11 +153,30 @@ class Order(models.Model):
                 order.payer_upi_id = payer_upi_id[:100]
             if payment_ref:
                 order.payment_ref = payment_ref[:64]
-            order.save(update_fields=['paid', 'paid_at', 'payer_upi_id', 'payment_ref'])
+            if payment_method:
+                order.payment_method = payment_method[:20]
+            if razorpay_payment_id:
+                order.razorpay_payment_id = razorpay_payment_id[:64]
+            if razorpay_order_id:
+                order.razorpay_order_id = razorpay_order_id[:64]
+            order.save(
+                update_fields=[
+                    'paid',
+                    'paid_at',
+                    'payer_upi_id',
+                    'payment_ref',
+                    'payment_method',
+                    'razorpay_payment_id',
+                    'razorpay_order_id',
+                ]
+            )
             self.paid = True
             self.paid_at = order.paid_at
             self.payer_upi_id = order.payer_upi_id
             self.payment_ref = order.payment_ref
+            self.payment_method = order.payment_method
+            self.razorpay_payment_id = order.razorpay_payment_id
+            self.razorpay_order_id = order.razorpay_order_id
             return True
 
 

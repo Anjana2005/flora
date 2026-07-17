@@ -32,8 +32,10 @@
         </p>
         {% endif %}
         {% if order.paid %}
-        <p><strong>Customer UPI (payer):</strong> {{ order.payer_upi_id|default:"—" }}</p>
-        <p><strong>UTR / ref:</strong> {{ order.payment_ref|default:"—" }}</p>
+        <p><strong>Payment method:</strong> {{ order.payment_method|default:"—" }}</p>
+        <p><strong>Payment ref / Razorpay id:</strong> {{ order.payment_ref|default:order.razorpay_payment_id|default:"—" }}</p>
+        {% if order.razorpay_order_id %}<p><strong>Razorpay order:</strong> {{ order.razorpay_order_id }}</p>{% endif %}
+        {% if order.payer_upi_id %}<p><strong>Customer UPI note:</strong> {{ order.payer_upi_id }}</p>{% endif %}
         {% endif %}
 
         {% if not order.paid %}

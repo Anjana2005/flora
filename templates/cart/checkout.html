@@ -381,34 +381,26 @@
                     <input type="hidden" name="country" value="India">
                 </div>
 
-                <!-- Customer UPI (required) + shop pay info -->
-                <div class="form-section" style="background: rgba(244,167,185,0.12); border-radius: 16px; padding: 1.25rem;">
-                    <h2><i class="fas fa-university"></i> UPI payment</h2>
-
-                    <p style="margin:0 0 0.5rem;font-weight:700;color:#5A3F4A;">Your UPI ID (required)</p>
-                    <p style="margin:0 0 0.6rem;font-size:0.9rem;color:#666;">
-                        Type the UPI ID you will pay from. This avoids spam fake payment confirmations.
+                <!-- Secure payment notice (actual pay on next page) -->
+                <div class="form-section" style="background: rgba(232,245,233,0.65); border-radius: 16px; padding: 1.25rem; border: 1px solid #c8e6c9;">
+                    <h2><i class="fas fa-shield-alt"></i> Secure payment</h2>
+                    {% if secure_payments %}
+                    <p style="margin:0 0 0.5rem;color:#1b5e20;font-weight:700;">
+                        Next step: bank-verified pay with UPI / GPay / PhonePe / card (Razorpay).
                     </p>
-                    <textarea
-                        name="payer_upi_id"
-                        id="payer_upi_id"
-                        required
-                        rows="3"
-                        placeholder="Example:&#10;yourname@oksbi&#10;or 98xxxxxxxx@ybl"
-                        style="width:100%;box-sizing:border-box;padding:0.9rem 1rem;border-radius:14px;border:2px solid #a5d6a7;font-size:1.05rem;font-family:inherit;resize:vertical;line-height:1.4;"
-                    >{{ payer_upi_id|default:'' }}</textarea>
-
-                    <div style="background:#fff;border-radius:12px;padding:1rem;border:1px solid rgba(232,122,150,0.25);margin-top:1rem;">
-                        <p style="margin:0.35rem 0;font-size:0.95rem;color:#666;">Shop UPI (you pay to this)</p>
-                        <p style="margin:0 0 0.75rem;font-size:1.25rem;font-weight:800;color:#5A3F4A;word-break:break-all;" id="checkout-upi-id">
-                            {{ upi_id }}
-                        </p>
-                        <button type="button" onclick="copyCheckoutUpi()" style="border:1px dashed #E87A96;background:transparent;color:#E87A96;border-radius:999px;padding:0.4rem 1rem;font-weight:700;cursor:pointer;margin-bottom:0.75rem;">
-                            Copy shop UPI
-                        </button>
-                        <p style="margin:0.5rem 0 0;font-size:0.95rem;color:#666;">Amount</p>
-                        <p style="margin:0;font-size:1.35rem;font-weight:800;color:#E87A96;">₹{{ order_total_str|default:cart.get_total_price }}</p>
-                    </div>
+                    <p style="margin:0;font-size:0.9rem;color:#555;">
+                        Paid status updates only after the payment succeeds — not by opening a link.
+                    </p>
+                    {% else %}
+                    <p style="margin:0 0 0.5rem;color:#6d4c00;font-weight:700;">
+                        Secure gateway activates after Razorpay keys are added on the server.
+                    </p>
+                    <p style="margin:0;font-size:0.9rem;color:#555;">
+                        You will pay on the next page. Amount:
+                        <strong style="color:#E87A96;">₹{{ order_total_str|default:cart.get_total_price }}</strong>
+                    </p>
+                    {% endif %}
+                    <input type="hidden" name="payer_upi_id" id="payer_upi_id" value="{{ payer_upi_id|default:'' }}">
                 </div>
 
                 <!-- Terms & Conditions -->
@@ -453,40 +445,20 @@
                 <span id="total-amount">₹{{ cart.get_total_price }}</span>
             </div>
 
-            <div style="background: #fff5f8; border: 1px solid rgba(232,122,150,0.3); padding: 1rem; border-radius: 12px; margin-top: 1rem;">
-                <p style="margin:0 0 0.4rem;font-weight:700;color:#5A3F4A;"><i class="fas fa-qrcode"></i> Pay to UPI</p>
-                <p style="margin:0;font-weight:800;font-size:1.05rem;color:#E87A96;word-break:break-all;">{{ upi_id }}</p>
-                <p style="margin:0.5rem 0 0;font-size:0.9rem;color:#666;">Total: <strong>₹{{ order_total_str|default:cart.get_total_price }}</strong></p>
-                <p style="margin:0.5rem 0 0;font-size:0.85rem;color:#888;">Paid status updates after you finish payment on the next page.</p>
+            <div style="background: #e8f5e9; border: 1px solid #c8e6c9; padding: 1rem; border-radius: 12px; margin-top: 1rem;">
+                <p style="margin:0 0 0.4rem;font-weight:700;color:#1b5e20;"><i class="fas fa-shield-alt"></i> Secure pay next</p>
+                <p style="margin:0.5rem 0 0;font-size:0.9rem;color:#555;">Total: <strong style="color:#E87A96;">₹{{ order_total_str|default:cart.get_total_price }}</strong></p>
+                <p style="margin:0.5rem 0 0;font-size:0.85rem;color:#666;">UPI · GPay · PhonePe · Cards via Razorpay (when enabled).</p>
             </div>
 
             <!-- Order Info -->
             <div style="background: var(--bg-light); padding: 1rem; border-radius: 8px; margin-top: 1rem; font-size: 0.9rem; color: var(--text-light);">
-                <p style="margin: 0.5rem 0;"><i class="fas fa-check" style="color: #27AE60;"></i> UPI payment</p>
+                <p style="margin: 0.5rem 0;"><i class="fas fa-check" style="color: #27AE60;"></i> Bank-verified payment</p>
                 <p style="margin: 0.5rem 0;"><i class="fas fa-check" style="color: #27AE60;"></i> Stock reduces only after paid</p>
                 <p style="margin: 0.5rem 0;"><i class="fas fa-check" style="color: #27AE60;"></i> Order details on WhatsApp</p>
             </div>
         </div>
     </div>
 </div>
-
-<script>
-function copyCheckoutUpi() {
-    var el = document.getElementById('checkout-upi-id');
-    var text = (el.innerText || el.textContent || '').trim();
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(function () {
-            alert('UPI ID copied: ' + text);
-        });
-    } else {
-        prompt('Copy UPI ID:', text);
-    }
-}
-// Normalize customer UPI textarea before submit
-document.querySelector('form') && document.querySelector('form').addEventListener('submit', function () {
-    var ta = document.getElementById('payer_upi_id');
-    if (ta) ta.value = (ta.value || '').replace(/\s+/g, '').toLowerCase();
-});
-</script>
 
 {% endblock %}

@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
-{% block title %}Pay {{ order_ref }} - Flora{% endblock %}
+{% block title %}Secure Pay {{ order_ref }} - Flora{% endblock %}
 
 {% block extra_css %}
 <style>
-    .pay-wrap { max-width: 420px; margin: 2.5rem auto 4rem; padding: 0 1rem; }
+    .pay-wrap { max-width: 440px; margin: 2.5rem auto 4rem; padding: 0 1rem; }
     .pay-card {
         background: rgba(255,255,255,0.98);
         border: 1px solid rgba(232,122,150,0.18);
@@ -20,35 +20,36 @@
         margin-bottom: 0.35rem;
     }
     .pay-amount { font-size: 2rem; font-weight: 800; color: #E87A96; margin: 0.5rem 0 0.75rem; }
-    .box {
-        background: rgba(244,167,185,0.14);
-        border-radius: 14px;
-        padding: 0.9rem 1rem;
-        text-align: left;
-        margin: 0.75rem 0 1rem;
-        font-size: 0.95rem;
+    .secure-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        background: #e8f5e9;
+        color: #1b5e20;
+        font-weight: 800;
+        font-size: 0.85rem;
+        padding: 0.4rem 0.85rem;
+        border-radius: 999px;
+        margin: 0.5rem 0 1rem;
     }
-    .qr-wrap {
-        display: inline-block;
-        background: #fff;
-        border-radius: 18px;
-        padding: 0.85rem;
-        border: 2px solid rgba(232,122,150,0.25);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-    }
-    .qr-wrap img {
-        width: 240px;
-        height: 240px;
+    .btn-pay {
         display: block;
-    }
-    .timer {
-        margin: 0.85rem auto 0.25rem;
+        width: 100%;
+        box-sizing: border-box;
+        margin: 0.75rem 0 0;
+        padding: 1rem 1.1rem;
+        border: none;
+        border-radius: 14px;
         font-weight: 800;
         font-size: 1.05rem;
-        color: #5A3F4A;
+        cursor: pointer;
+        text-decoration: none;
+        color: #fff;
+        background: linear-gradient(135deg, #E87A96, #d45f7d);
+        box-shadow: 0 10px 22px rgba(232,122,150,0.3);
     }
-    .timer span { color: #E87A96; }
-    .hint { color: #777; font-size: 0.88rem; line-height: 1.45; margin-top: 0.5rem; }
+    .btn-pay:disabled { opacity: 0.6; cursor: wait; }
+    .hint { color: #666; font-size: 0.9rem; line-height: 1.5; margin-top: 0.85rem; text-align: left; }
     .note {
         background: #e3f2fd;
         color: #0d47a1;
@@ -59,75 +60,111 @@
         line-height: 1.45;
         margin: 1rem 0 0;
     }
-    .payer-note {
-        background: #e8f5e9;
+    .warn {
+        background: #fff8e1;
+        color: #6d4c00;
         border-radius: 12px;
-        padding: 0.75rem 1rem;
+        padding: 0.85rem 1rem;
         text-align: left;
-        color: #1b5e20;
-        margin: 0.75rem 0;
+        font-size: 0.9rem;
+        line-height: 1.45;
+        margin: 1rem 0 0;
+    }
+    .err {
+        background: #ffebee;
+        color: #b71c1c;
+        border-radius: 12px;
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+        text-align: left;
         font-size: 0.9rem;
     }
     .items { text-align: left; color: #5A3F4A; margin: 1rem 0 0; font-size: 0.92rem; }
-    .refreshing { opacity: 0.45; transition: opacity 0.2s; }
+    .methods { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; margin: 0.75rem 0; }
+    .methods span {
+        background: #f5f5f5;
+        color: #555;
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 0.25rem 0.55rem;
+        border-radius: 999px;
+    }
+    .manual-box {
+        margin-top: 1.25rem;
+        padding-top: 1rem;
+        border-top: 1px dashed rgba(232,122,150,0.35);
+        text-align: left;
+        font-size: 0.88rem;
+        color: #666;
+    }
+    .manual-box code {
+        display: block;
+        margin: 0.35rem 0;
+        font-weight: 800;
+        color: #5A3F4A;
+        word-break: break-all;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="pay-wrap">
     <div class="pay-card">
-        <h1>Pay with UPI scanner</h1>
-        <p>Order <strong id="order-ref">{{ order_ref }}</strong></p>
-        <div class="pay-amount">₹<span id="amount-str">{{ amount_str }}</span></div>
+        <h1>Secure payment</h1>
+        <p>Order <strong>{{ order_ref }}</strong></p>
+        <div class="pay-amount">₹{{ amount_str }}</div>
 
         {% if messages %}
             {% for message in messages %}
-            <div style="background:#ffebee;color:#b71c1c;border-radius:12px;padding:0.75rem;margin-bottom:0.75rem;text-align:left;font-size:0.9rem;">
-                {{ message }}
-            </div>
+            <div class="err">{{ message }}</div>
             {% endfor %}
         {% endif %}
 
-        {% if payer_upi_id %}
-        <div class="payer-note">
-            Your UPI (checkout): <strong>{{ payer_upi_id }}</strong>
+        {% if secure_payments %}
+        <div class="secure-badge">
+            <i class="fas fa-shield-alt"></i> Bank-verified · Razorpay
+        </div>
+        <div class="methods">
+            <span>UPI</span>
+            <span>GPay</span>
+            <span>PhonePe</span>
+            <span>Cards</span>
+            <span>Netbanking</span>
+        </div>
+
+        <button type="button" class="btn-pay" id="rzp-button">
+            <i class="fas fa-lock"></i> Pay ₹{{ amount_str }} securely
+        </button>
+        <p class="hint" id="pay-status">
+            Payment is confirmed only after the bank / UPI app succeeds.
+            Admin shows <strong>Paid: Yes</strong> only then — not by opening a link.
+        </p>
+        <div class="note">
+            <strong>Safe checkout:</strong> Powered by Razorpay.
+            Your card/UPI details stay with the payment provider — not stored on this shop website.
+        </div>
+        {% else %}
+        <div class="warn">
+            <strong>Secure gateway not active yet.</strong><br>
+            Add Razorpay keys on the server so customers can pay with verified UPI/cards.
+            Until then, pay manually to shop UPI and ask the shop to mark Paid in admin after checking the bank app.
+            {% if rz_error %}<br><br><small>Details: {{ rz_error }}</small>{% endif %}
+        </div>
+        <div class="manual-box">
+            <strong>Shop UPI (manual)</strong>
+            <code>{{ shop_upi_id }}</code>
+            Amount: <strong>₹{{ amount_str }}</strong> · Ref: {{ order_ref }}
+            <p style="margin:0.6rem 0 0;">After you pay, WhatsApp the shop with this order number. Admin will confirm Paid after checking money.</p>
+            {% if upi_link %}
+            <a class="btn-pay" style="text-align:center;margin-top:0.85rem;" href="{{ upi_link }}">Open UPI app</a>
+            {% endif %}
+            {% if qr_url %}
+            <div style="text-align:center;margin-top:1rem;">
+                <img src="{{ qr_url }}" alt="UPI QR" width="200" height="200" style="border-radius:12px;">
+            </div>
+            {% endif %}
         </div>
         {% endif %}
-
-        <div class="box">
-            <div style="color:#666;font-size:0.85rem;">Shop UPI</div>
-            <div style="font-weight:800;color:#5A3F4A;word-break:break-all;" id="shop-upi">{{ shop_upi_id }}</div>
-            <div style="margin-top:0.4rem;color:#666;font-size:0.85rem;">
-                Scanner ref: <strong id="payment-tr">{{ payment_tr }}</strong>
-            </div>
-        </div>
-
-        <div class="qr-wrap" id="qr-wrap">
-            <img id="qr-img" src="{{ qr_url }}" alt="UPI payment QR for {{ order_ref }}">
-        </div>
-
-        <p class="hint" style="margin-top:0.85rem;">
-            <strong>Fast pay:</strong> open GPay / PhonePe → Scan QR → Pay.<br>
-            Amount is already filled. Payment usually finishes in a few seconds.
-        </p>
-
-        <a id="pay-now-btn" href="{{ scan_page_url }}"
-           style="display:block;margin:1rem 0 0.5rem;padding:0.9rem 1rem;background:#E87A96;color:#fff;border-radius:14px;font-weight:800;text-decoration:none;">
-            Open UPI app now
-        </a>
-        <a id="wa-after-btn" href="{% url 'shop:order_launch_payment' order.id %}?method=wa"
-           style="display:block;margin:0.45rem 0 0;padding:0.85rem 1rem;background:#25D366;color:#fff;border-radius:14px;font-weight:800;text-decoration:none;">
-            After pay → WhatsApp shop (Paid: Yes)
-        </a>
-
-        <div class="timer" style="font-size:0.85rem;font-weight:600;color:#999;margin-top:1rem;">
-            QR refreshes in <span id="countdown">{{ seconds_left }}</span>s
-        </div>
-
-        <div class="note">
-            <strong>Why it felt slow before:</strong> the site sometimes sleeps on free hosting
-            (first open can take 30–50s). The QR now opens your UPI app directly — much faster.
-        </div>
 
         <ul class="items">
             {% for item in items %}
@@ -141,58 +178,104 @@
     </div>
 </div>
 
+{% if secure_payments %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
 (function () {
-    var apiUrl = "{{ qr_api_url|escapejs }}";
-    var secondsLeft = parseInt("{{ seconds_left }}", 10) || 120;
-    var rotateSeconds = parseInt("{{ rotate_seconds }}", 10) || 120;
-    var countdownEl = document.getElementById('countdown');
-    var qrImg = document.getElementById('qr-img');
-    var qrWrap = document.getElementById('qr-wrap');
-    var trEl = document.getElementById('payment-tr');
+    var btn = document.getElementById('rzp-button');
+    var statusEl = document.getElementById('pay-status');
+    var key = "{{ razorpay_key_id|escapejs }}";
+    var orderId = "{{ razorpay_order_id|escapejs }}";
+    var amount = parseInt("{{ razorpay_amount_paise }}", 10) || 0;
+    var verifyUrl = "{{ verify_url|escapejs }}";
+    var successUrl = "{{ success_url|escapejs }}";
+    var csrf = "{{ csrf_token|escapejs }}";
+    var customerName = "{{ order.first_name|escapejs }} {{ order.last_name|escapejs }}".trim();
+    var customerEmail = "{{ order.email|escapejs }}";
+    var customerPhone = "{{ order.phone|escapejs }}";
 
-    function applyPayment(data) {
-        if (data.paid && data.redirect) {
-            window.location.href = data.redirect;
+    function setStatus(msg, isErr) {
+        if (!statusEl) return;
+        statusEl.innerHTML = msg;
+        statusEl.style.color = isErr ? '#b71c1c' : '#666';
+    }
+
+    function verifyPayment(response) {
+        setStatus('Verifying payment with bank… please wait.');
+        if (btn) btn.disabled = true;
+        fetch(verifyUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrf,
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+            })
+        })
+        .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+        .then(function (res) {
+            if (res.data && res.data.ok && res.data.redirect) {
+                setStatus('Payment verified ✓ Redirecting…');
+                window.location.href = res.data.redirect;
+                return;
+            }
+            var err = (res.data && res.data.error) || 'Verification failed';
+            setStatus('Could not verify payment: ' + err, true);
+            if (btn) btn.disabled = false;
+        })
+        .catch(function () {
+            setStatus('Network error while verifying. If money was debited, contact the shop with order {{ order_ref }}.', true);
+            if (btn) btn.disabled = false;
+        });
+    }
+
+    function openCheckout() {
+        if (!window.Razorpay) {
+            setStatus('Payment script failed to load. Refresh and try again.', true);
             return;
         }
-        if (data.qr_url) {
-            qrImg.src = data.qr_url;
-        }
-        if (data.tr && trEl) trEl.textContent = data.tr;
-        if (data.amount_str) {
-            var a = document.getElementById('amount-str');
-            if (a) a.textContent = data.amount_str;
-        }
-        if (typeof data.seconds_left === 'number') {
-            secondsLeft = data.seconds_left;
-        }
-        if (countdownEl) countdownEl.textContent = secondsLeft;
-        qrWrap.classList.remove('refreshing');
+        var options = {
+            key: key,
+            amount: amount,
+            currency: 'INR',
+            name: 'Flora Shop Thrissur',
+            description: 'Order {{ order_ref|escapejs }}',
+            order_id: orderId,
+            prefill: {
+                name: customerName,
+                email: customerEmail,
+                contact: customerPhone
+            },
+            theme: { color: '#E87A96' },
+            modal: {
+                ondismiss: function () {
+                    setStatus('Payment window closed. Tap the button again when ready.');
+                    if (btn) btn.disabled = false;
+                }
+            },
+            handler: function (response) {
+                verifyPayment(response);
+            }
+        };
+        var rzp = new Razorpay(options);
+        rzp.on('payment.failed', function (resp) {
+            var desc = (resp && resp.error && (resp.error.description || resp.error.reason)) || 'Payment failed';
+            setStatus(desc + ' — try again.', true);
+            if (btn) btn.disabled = false;
+        });
+        if (btn) btn.disabled = true;
+        rzp.open();
     }
 
-    function refreshQr() {
-        qrWrap.classList.add('refreshing');
-        fetch(apiUrl, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
-            .then(function (r) { return r.json(); })
-            .then(applyPayment)
-            .catch(function () {
-                qrWrap.classList.remove('refreshing');
-            });
+    if (btn) {
+        btn.addEventListener('click', openCheckout);
     }
-
-    // Countdown; when it hits 0, build a new scanner
-    setInterval(function () {
-        secondsLeft -= 1;
-        if (secondsLeft <= 0) {
-            secondsLeft = rotateSeconds;
-            refreshQr();
-        }
-        if (countdownEl) countdownEl.textContent = Math.max(0, secondsLeft);
-    }, 1000);
-
-    // Soft refresh every 2 minutes even if timer drifts
-    setInterval(refreshQr, rotateSeconds * 1000);
 })();
 </script>
+{% endif %}
 {% endblock %}

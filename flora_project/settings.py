@@ -209,6 +209,14 @@ UPI_ID = os.environ.get('UPI_ID', '7591927789@fam')
 # Leave empty for personal UPI — a wrong payee name breaks deep links in GPay/PhonePe
 # while manual "Send to UPI ID" still works (app looks up the real name).
 UPI_MERCHANT_NAME = os.environ.get('UPI_MERCHANT_NAME', '')
+
+# Secure online payments (Razorpay) — set these on Render for real bank-verified pay.
+# Dashboard: https://dashboard.razorpay.com/app/keys
+RAZORPAY_KEY_ID = os.environ.get('RAZORPAY_KEY_ID', '').strip()
+RAZORPAY_KEY_SECRET = os.environ.get('RAZORPAY_KEY_SECRET', '').strip()
+# Optional: webhook secret from Razorpay Dashboard → Webhooks
+RAZORPAY_WEBHOOK_SECRET = os.environ.get('RAZORPAY_WEBHOOK_SECRET', '').strip()
+
 # Order notifications / payment confirmation WhatsApp (with country code 91)
 # When a customer places/pays an order, messages go here:
 WHATSAPP_ORDER_NUMBER = os.environ.get('WHATSAPP_ORDER_NUMBER', '919605531101')

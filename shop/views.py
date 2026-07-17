@@ -25,6 +25,8 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 from datetime import datetime
 from .models import Category, Product, Contact, Order, OrderItem, OfferSale
 
@@ -599,7 +601,7 @@ def admin_order_detail(request, id):
     open_shop_whatsapp = False
 
     if request.method == 'POST' and request.POST.get('action') == 'mark_paid':
-        if order.mark_as_paid():
+        if order.mark_as_paid(payment_method='admin'):
             messages.success(
                 request,
                 f'Order #FLORA{order.id} marked Paid. Size stock reduced. '
@@ -1365,13 +1367,12 @@ def admin_offer_delete(request, id):
 
 
 def checkout(request):
-    """Place order, then show UPI payment page (also used by cart checkout form)."""
+    """Place order, then go to secure payment page."""
     from cart.cart import Cart
-    from .payments import get_upi_id, _amount_str
+    from .payments import get_upi_id, _amount_str, is_valid_upi_id
+    from .secure_payments import razorpay_configured
 
     cart = Cart(request)
-
-    from .payments import is_valid_upi_id
 
     def _checkout_context(extra=None):
         ctx = {
@@ -1379,6 +1380,7 @@ def checkout(request):
             'upi_id': get_upi_id(),
             'order_total': cart.get_total_price(),
             'order_total_str': _amount_str(cart.get_total_price()),
+            'secure_payments': razorpay_configured(),
         }
         if extra:
             ctx.update(extra)
@@ -1398,7 +1400,6 @@ def checkout(request):
             city = request.POST.get("city", "").strip()
             postal = request.POST.get("postal", "").strip()
             country = "India"
-            # Customer UPI ID (textarea) — required to reduce spam fake payments
             payer_upi = (request.POST.get("payer_upi_id") or "").strip().lower()
             payer_upi = "".join(payer_upi.split())
 
@@ -1410,27 +1411,28 @@ def checkout(request):
                     _checkout_context({'payer_upi_id': request.POST.get('payer_upi_id', '')}),
                 )
 
-            if not is_valid_upi_id(payer_upi):
-                messages.error(
-                    request,
-                    'Please enter your UPI ID in the box (example: yourname@oksbi).',
-                )
-                return render(
-                    request,
-                    "cart/checkout.html",
-                    _checkout_context({'payer_upi_id': request.POST.get('payer_upi_id', '')}),
-                )
-
-            if payer_upi == get_upi_id().lower():
-                messages.error(
-                    request,
-                    'Enter YOUR UPI ID (the one you will pay from), not the shop UPI.',
-                )
-                return render(
-                    request,
-                    "cart/checkout.html",
-                    _checkout_context({'payer_upi_id': request.POST.get('payer_upi_id', '')}),
-                )
+            # Optional note only — not used to mark paid
+            if payer_upi:
+                if not is_valid_upi_id(payer_upi):
+                    messages.error(
+                        request,
+                        'UPI ID looks invalid. Leave it blank or use format name@bank (e.g. name@oksbi).',
+                    )
+                    return render(
+                        request,
+                        "cart/checkout.html",
+                        _checkout_context({'payer_upi_id': request.POST.get('payer_upi_id', '')}),
+                    )
+                if payer_upi == get_upi_id().lower():
+                    messages.error(
+                        request,
+                        'Enter YOUR UPI ID (optional), not the shop UPI.',
+                    )
+                    return render(
+                        request,
+                        "cart/checkout.html",
+                        _checkout_context({'payer_upi_id': request.POST.get('payer_upi_id', '')}),
+                    )
 
             order = Order.objects.create(
                 first_name=first_name,
@@ -1464,9 +1466,11 @@ def checkout(request):
 
 def order_pay(request, order_id):
     """
-    Payment page: pure UPI QR (opens GPay/PhonePe instantly).
+    Secure payment page.
+    Primary: Razorpay (UPI/card/netbanking) — Paid only after bank verification.
     """
-    from .payments import build_order_payment_qr, get_upi_id
+    from .payments import build_order_payment_qr, get_upi_id, _amount_str
+    from .secure_payments import razorpay_configured, create_razorpay_order
     from django.urls import reverse
 
     order = get_object_or_404(Order, id=order_id)
@@ -1474,108 +1478,197 @@ def order_pay(request, order_id):
     if order.paid:
         return redirect('shop:order_paid_success', order_id=order.id)
 
-    # pay-now: mark Paid Yes + open UPI app immediately
-    scan_page_url = request.build_absolute_uri(
-        reverse('shop:order_launch_payment', args=[order.id]) + '?method=scan'
-    )
-    payment = build_order_payment_qr(order, scan_page_url=scan_page_url)
+    secure = razorpay_configured()
+    rz = None
+    rz_error = ''
+    if secure:
+        try:
+            rz = create_razorpay_order(order)
+        except Exception as e:
+            rz_error = str(e)
+            secure = False
+
+    payment = build_order_payment_qr(order)
 
     context = {
         'order': order,
-        'order_ref': payment['order_ref'],
-        'payment_tr': payment['tr'],
-        'qr_slot': payment['slot'],
-        'seconds_left': payment['seconds_left'],
-        'rotate_seconds': payment['rotate_seconds'],
+        'order_ref': f'FLORA{order.id}',
         'total': order.get_total_cost(),
-        'amount_str': payment['amount_str'],
-        'shop_upi_id': payment['shop_upi_id'],
+        'amount_str': _amount_str(order.get_total_cost()),
+        'shop_upi_id': get_upi_id(),
         'upi_id': get_upi_id(),
         'payer_upi_id': order.payer_upi_id,
         'upi_link': payment['upi_link'],
         'qr_url': payment['qr_url'],
-        'scan_page_url': scan_page_url,
-        'qr_api_url': reverse('shop:order_payment_qr_api', args=[order.id]),
         'items': order.items.select_related('product').all(),
+        'secure_payments': secure,
+        'rz_error': rz_error,
+        'razorpay_key_id': (rz or {}).get('key_id', ''),
+        'razorpay_order_id': (rz or {}).get('order_id', ''),
+        'razorpay_amount_paise': (rz or {}).get('amount_paise', 0),
+        'verify_url': reverse('shop:order_razorpay_verify', args=[order.id]),
+        'success_url': reverse('shop:order_paid_success', args=[order.id]),
     }
     return render(request, 'shop/order_pay.html', context)
 
 
 def order_payment_qr_api(request, order_id):
-    """JSON: fresh UPI scanner for this order (rotates every 2 minutes)."""
-    from .payments import build_order_payment_qr
+    """JSON status for payment page polling (paid flag only)."""
     from django.http import JsonResponse
     from django.urls import reverse
 
     order = get_object_or_404(Order, id=order_id)
     if order.paid:
         return JsonResponse({'paid': True, 'redirect': reverse('shop:order_paid_success', args=[order.id])})
+    return JsonResponse({'paid': False})
 
-    scan_page_url = request.build_absolute_uri(
-        reverse('shop:order_launch_payment', args=[order.id]) + '?method=scan'
+
+def order_razorpay_verify(request, order_id):
+    """
+    POST: verify Razorpay checkout signature, then mark Paid.
+    This is the secure client callback (handler).
+    """
+    from django.http import JsonResponse
+    from django.urls import reverse
+    from django.views.decorators.http import require_POST
+    from .secure_payments import verify_payment_signature, razorpay_configured
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST required'}, status=405)
+
+    order = get_object_or_404(Order, id=order_id)
+    if order.paid:
+        return JsonResponse({
+            'ok': True,
+            'already_paid': True,
+            'redirect': reverse('shop:order_paid_success', args=[order.id]),
+        })
+
+    if not razorpay_configured():
+        return JsonResponse({'ok': False, 'error': 'Secure payments not configured'}, status=503)
+
+    # Support JSON or form body
+    if request.content_type and 'application/json' in request.content_type:
+        try:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        except json.JSONDecodeError:
+            payload = {}
+    else:
+        payload = request.POST
+
+    rz_order = (payload.get('razorpay_order_id') or '').strip()
+    rz_payment = (payload.get('razorpay_payment_id') or '').strip()
+    rz_sign = (payload.get('razorpay_signature') or '').strip()
+
+    if not rz_order or not rz_payment or not rz_sign:
+        return JsonResponse({'ok': False, 'error': 'Missing payment fields'}, status=400)
+
+    # Order id on payment must match this Flora order
+    if order.razorpay_order_id and order.razorpay_order_id != rz_order:
+        return JsonResponse({'ok': False, 'error': 'Order mismatch'}, status=400)
+
+    if not verify_payment_signature(rz_order, rz_payment, rz_sign):
+        return JsonResponse({'ok': False, 'error': 'Invalid payment signature'}, status=400)
+
+    order.mark_as_paid(
+        payment_ref=rz_payment,
+        payment_method='razorpay',
+        razorpay_payment_id=rz_payment,
+        razorpay_order_id=rz_order,
     )
-    payment = build_order_payment_qr(order, scan_page_url=scan_page_url)
-    return JsonResponse(
-        {
-            'paid': False,
-            'order_ref': payment['order_ref'],
-            'tr': payment['tr'],
-            'slot': payment['slot'],
-            'seconds_left': payment['seconds_left'],
-            'rotate_seconds': payment['rotate_seconds'],
-            'amount_str': payment['amount_str'],
-            'shop_upi_id': payment['shop_upi_id'],
-            'upi_link': payment['upi_link'],
-            'qr_url': payment['qr_url'],
-        }
+    return JsonResponse({
+        'ok': True,
+        'redirect': reverse('shop:order_paid_success', args=[order.id]),
+    })
+
+
+@csrf_exempt
+@require_http_methods(['POST'])
+def order_razorpay_webhook(request):
+    """
+    Razorpay server webhook (payment.captured) — backup confirmation path.
+    Configure URL: https://your-site/order/razorpay/webhook/
+    """
+    from django.http import HttpResponse, HttpResponseForbidden
+    from .secure_payments import verify_webhook_signature
+
+    body = request.body
+    signature = request.headers.get('X-Razorpay-Signature', '') or request.META.get(
+        'HTTP_X_RAZORPAY_SIGNATURE', ''
     )
+    if not verify_webhook_signature(body, signature):
+        return HttpResponseForbidden('invalid signature')
+
+    try:
+        event = json.loads(body.decode('utf-8'))
+    except json.JSONDecodeError:
+        return HttpResponse(status=400)
+
+    event_name = event.get('event') or ''
+    payload = event.get('payload') or {}
+    payment_entity = ((payload.get('payment') or {}).get('entity')) or {}
+    order_entity = ((payload.get('order') or {}).get('entity')) or {}
+
+    if event_name not in ('payment.captured', 'payment.authorized', 'order.paid'):
+        return HttpResponse(status=200)
+
+    rz_payment_id = payment_entity.get('id') or ''
+    rz_order_id = payment_entity.get('order_id') or order_entity.get('id') or ''
+    status = (payment_entity.get('status') or '').lower()
+
+    if status and status not in ('captured', 'authorized'):
+        return HttpResponse(status=200)
+
+    order = None
+    if rz_order_id:
+        order = Order.objects.filter(razorpay_order_id=rz_order_id).first()
+    if order is None and rz_payment_id:
+        order = Order.objects.filter(razorpay_payment_id=rz_payment_id).first()
+    # notes.flora_order_id fallback
+    if order is None:
+        notes = payment_entity.get('notes') or order_entity.get('notes') or {}
+        flora_id = notes.get('flora_order_id')
+        if flora_id:
+            order = Order.objects.filter(pk=flora_id).first()
+
+    if order and not order.paid:
+        order.mark_as_paid(
+            payment_ref=rz_payment_id or order.payment_ref,
+            payment_method='razorpay',
+            razorpay_payment_id=rz_payment_id,
+            razorpay_order_id=rz_order_id or order.razorpay_order_id,
+        )
+
+    return HttpResponse(status=200)
 
 
 def order_launch_payment(request, order_id):
     """
-    Fast path when order scanner / pay link is opened:
-    1) Set Paid: Yes in admin + stock
-    2) Redirect straight to UPI app (no waiting page)
+    Manual UPI deep-link helper only.
+    Does NOT mark order paid (that would be insecure).
+    Paid is set only by verified Razorpay or admin.
     """
     from .payments import (
         build_payment_confirmation_whatsapp_url,
         build_order_payment_qr,
-        is_valid_upi_id,
     )
     from django.http import HttpResponseRedirect
 
     order = get_object_or_404(Order, id=order_id)
     method = (request.GET.get('method') or 'scan').lower()
 
-    # Mark Paid immediately (admin dashboard)
-    if not order.paid:
-        payer = (order.payer_upi_id or '').strip().lower()
-        if not is_valid_upi_id(payer):
-            payer = 'via-scanner'
-        order.mark_as_paid(payer_upi_id=payer)
-        order.refresh_from_db()
-    if not order.paid:
-        from django.utils import timezone as dj_tz
-        Order.objects.filter(pk=order.pk).update(
-            paid=True,
-            paid_at=dj_tz.now(),
-            payer_upi_id=(order.payer_upi_id or 'via-scanner')[:100],
-        )
-        order.refresh_from_db()
+    if order.paid and method in ('wa', 'whatsapp'):
+        return HttpResponseRedirect(build_payment_confirmation_whatsapp_url(order, request))
+
+    if method in ('wa', 'whatsapp'):
+        # Do not fake paid — send them back to secure pay page
+        return redirect('shop:order_pay', order_id=order.id)
 
     payment = build_order_payment_qr(order)
     upi_link = payment.get('upi_link') or ''
-    whatsapp_url = build_payment_confirmation_whatsapp_url(order, request)
-
-    # WhatsApp-only (e.g. after success page)
-    if method in ('wa', 'whatsapp'):
-        return HttpResponseRedirect(whatsapp_url)
-
-    # Default / scan / UPI apps → open payment app immediately (fast)
     if upi_link:
         return HttpResponseRedirect(upi_link)
-
-    return HttpResponseRedirect(whatsapp_url)
+    return redirect('shop:order_pay', order_id=order.id)
 
 
 def order_confirm_paid(request, order_id):
