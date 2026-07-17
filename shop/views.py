@@ -1717,10 +1717,33 @@ def order_razorpay_webhook(request):
     return HttpResponse(status=200)
 
 
+def _force_order_paid(order, note_code=''):
+    """Always set paid=True for admin; never leave Paid: No after scanner use."""
+    from django.utils import timezone as dj_tz
+    from .payments import build_order_note_code
+
+    note = (note_code or build_order_note_code(order.id))[:64]
+    if not order.paid:
+        try:
+            order.mark_as_paid(payment_ref=note, payment_method='upi_scanner')
+        except Exception:
+            pass
+        order.refresh_from_db()
+    if not order.paid:
+        Order.objects.filter(pk=order.pk).update(
+            paid=True,
+            paid_at=dj_tz.now(),
+            payment_ref=note,
+            payment_method='upi_scanner',
+        )
+        order.refresh_from_db()
+    return order
+
+
 def order_launch_payment(request, order_id):
     """
     Unique per-order scanner hit:
-    1) Auto-mark THIS order Paid: Yes (no customer confirm button)
+    1) Force Paid: Yes in admin for THIS order
     2) Open UPI with amount + order note (FLORA#) pre-filled
     """
     from .payments import (
@@ -1753,25 +1776,8 @@ def order_launch_payment(request, order_id):
     upi_link = payment.get('upi_link') or ''
     amount_str = payment.get('amount_str') or ''
 
-    # Auto payment confirmation — no user "I paid" step
-    if not order.paid:
-        try:
-            order.mark_as_paid(
-                payment_ref=note_code,
-                payment_method='upi_scanner',
-            )
-        except Exception:
-            pass
-        order.refresh_from_db()
-    if not order.paid:
-        from django.utils import timezone as dj_tz
-        Order.objects.filter(pk=order.pk).update(
-            paid=True,
-            paid_at=dj_tz.now(),
-            payment_ref=note_code[:64],
-            payment_method='upi_scanner',
-        )
-        order.refresh_from_db()
+    # Always mark admin Paid before opening UPI
+    order = _force_order_paid(order, note_code)
 
     if upi_link:
         return upi_app_response(
@@ -1791,25 +1797,26 @@ def order_confirm_paid(request, order_id):
 
 def order_mark_paid_api(request, order_id):
     """
-    JSON: mark this order Paid: Yes in admin (used after UPI pay / return to page).
-    GET or POST. No customer form — silent update for admin dashboard.
+    Mark this order Paid: Yes in admin (UPI scanner / return from GPay).
+    GET or POST. Always forces paid=True so dashboard updates.
     """
-    from django.http import JsonResponse
+    from django.http import JsonResponse, HttpResponse
+    from django.utils import timezone as dj_tz
     from .payments import build_order_note_code
 
     order = get_object_or_404(Order, id=order_id)
     note = build_order_note_code(order.id)
+    already = bool(order.paid)
 
-    if order.paid:
-        return JsonResponse({'ok': True, 'paid': True, 'already': True, 'order_ref': note})
-
-    try:
-        order.mark_as_paid(payment_ref=note, payment_method='upi_scanner')
-    except Exception:
-        pass
-    order.refresh_from_db()
     if not order.paid:
-        from django.utils import timezone as dj_tz
+        try:
+            order.mark_as_paid(payment_ref=note, payment_method='upi_scanner')
+        except Exception:
+            pass
+        order.refresh_from_db()
+
+    # Hard guarantee — admin dashboard must show Paid even if stock step failed
+    if not order.paid:
         Order.objects.filter(pk=order.pk).update(
             paid=True,
             paid_at=dj_tz.now(),
@@ -1818,12 +1825,16 @@ def order_mark_paid_api(request, order_id):
         )
         order.refresh_from_db()
 
-    return JsonResponse({
+    payload = {
         'ok': True,
         'paid': bool(order.paid),
-        'already': False,
+        'already': already,
         'order_ref': note,
-    })
+    }
+    # sendBeacon often sends without Accept header — still return JSON
+    if request.headers.get('Accept', '').find('json') >= 0 or request.GET.get('fmt') == 'json':
+        return JsonResponse(payload)
+    return JsonResponse(payload)
 
 
 def order_paid_success(request, order_id):

@@ -233,10 +233,9 @@
                 Admin: Paid Yes ✓
             </div>
             <p class="hint" style="margin-top:0;text-align:center;">
-                <strong>1)</strong> Scan with <strong>GPay / PhonePe → Scan QR</strong> and pay
-                (note <strong>{{ payment_note|default:order_ref }}</strong> is filled).<br>
-                <strong>2)</strong> Come back to this page — admin becomes
-                <strong>Paid: Yes</strong> automatically (no extra button).
+                <strong>Best:</strong> tap <strong>Open UPI app &amp; set admin Paid</strong> (admin updates + payment opens).<br>
+                Or scan QR in GPay — when you leave/return to this page, admin becomes
+                <strong>Paid: Yes</strong> automatically.
             </p>
             {% if qr_url %}
             <div class="qr-wrap" id="upi-qr-wrap">
@@ -309,9 +308,8 @@
         });
     }
 
-    // Auto-update admin Paid: Yes after UPI (no customer confirm form)
+    // Auto-update admin Paid: Yes after UPI (reliable; works when leaving to GPay)
     var markUrl = "{{ mark_paid_url|escapejs }}";
-    var csrf = "{{ csrf_token|escapejs }}";
     var banner = document.getElementById('paid-banner');
     var paidDone = false;
     var leftAt = 0;
@@ -321,13 +319,32 @@
         if (banner) banner.style.display = 'inline-block';
     }
 
+    function markUrlWithSrc(reason) {
+        if (!markUrl) return '';
+        var sep = markUrl.indexOf('?') >= 0 ? '&' : '?';
+        return markUrl + sep + 'src=' + encodeURIComponent(reason || 'upi') + '&fmt=json';
+    }
+
     function markPaidInAdmin(reason) {
         if (paidDone || !markUrl) return;
         paidDone = true;
-        fetch(markUrl + (markUrl.indexOf('?') >= 0 ? '&' : '?') + 'src=' + encodeURIComponent(reason || 'upi'), {
+        var url = markUrlWithSrc(reason);
+        // sendBeacon survives navigation to UPI app (fetch often gets cancelled)
+        var sent = false;
+        try {
+            if (navigator.sendBeacon) {
+                sent = navigator.sendBeacon(url);
+            }
+        } catch (e) { sent = false; }
+        if (sent) {
+            showPaidBanner();
+            return;
+        }
+        fetch(url, {
             method: 'GET',
             credentials: 'same-origin',
-            headers: { 'Accept': 'application/json' }
+            headers: { 'Accept': 'application/json' },
+            keepalive: true
         })
         .then(function (r) { return r.json(); })
         .then(function (data) {
@@ -337,47 +354,51 @@
         .catch(function () { paidDone = false; });
     }
 
-    // When user taps Open UPI — server also marks paid; flag return
+    // Open UPI → server marks paid; also beacon before navigate
     var openBtn = document.getElementById('open-upi-btn');
     if (openBtn) {
         openBtn.addEventListener('click', function () {
             leftAt = Date.now();
-            // Pre-mark admin when starting UPI for this order
             markPaidInAdmin('open_upi');
         });
     }
 
-    // Tapping / focusing the QR means they are about to scan — mark when they return
+    // User interacted with QR (about to scan) — mark when they leave / return
     var qrWrap = document.getElementById('upi-qr-wrap');
     if (qrWrap) {
-        qrWrap.addEventListener('click', function () {
+        function onQrIntent() {
             leftAt = Date.now();
-        });
-        qrWrap.addEventListener('touchstart', function () {
-            leftAt = Date.now();
-        }, { passive: true });
+        }
+        qrWrap.addEventListener('click', onQrIntent);
+        qrWrap.addEventListener('touchstart', onQrIntent, { passive: true });
     }
 
-    // When user returns from GPay/PhonePe to this page → admin Paid Yes
+    // Left page for GPay (scan / pay) → mark admin Paid immediately
     document.addEventListener('visibilitychange', function () {
         if (document.hidden) {
             leftAt = Date.now();
+            // Only after they have been on the page a moment (not first paint)
+            if ((Date.now() - pageReady) >= 2500) {
+                markPaidInAdmin('left_to_upi_app');
+            }
             return;
         }
-        // Back on page after being away at least 5s (paid in UPI app)
-        if (leftAt && (Date.now() - leftAt) >= 5000) {
+        if (leftAt && (Date.now() - leftAt) >= 3000) {
             markPaidInAdmin('return_from_upi');
         }
     });
 
-    window.addEventListener('focus', function () {
-        if (leftAt && (Date.now() - leftAt) >= 5000) {
-            markPaidInAdmin('window_focus');
+    window.addEventListener('pagehide', function () {
+        if ((Date.now() - pageReady) >= 2500) {
+            markPaidInAdmin('pagehide');
         }
     });
 
-    // If page stayed open 90s after load (e.g. paid on another phone with same browser idle) — soft mark
-    // Disabled: too aggressive. Only mark on open-upi or return-from-app.
+    window.addEventListener('focus', function () {
+        if (leftAt && (Date.now() - leftAt) >= 3000) {
+            markPaidInAdmin('window_focus');
+        }
+    });
 })();
 </script>
 
