@@ -65,6 +65,14 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     paid = models.BooleanField(default=False)
+    # Customer's UPI ID used to confirm payment (anti-spam; not auto on pay-click)
+    payer_upi_id = models.CharField(max_length=100, blank=True, default='')
+    payment_ref = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        help_text='Optional UTR / transaction reference',
+    )
 
     class Meta:
         ordering = ['-created_at']
@@ -75,13 +83,12 @@ class Order(models.Model):
     def get_total_cost(self):
         return sum(item.price * item.quantity for item in self.items.all())
 
-    def mark_as_paid(self):
+    def mark_as_paid(self, payer_upi_id='', payment_ref=''):
         """
-        ONLY path that reduces stock. Call after confirmed UPI payment.
+        ONLY path that reduces stock. Call after customer submits their UPI ID.
+        - Saves payer UPI (who paid)
         - Sets paid=Yes for admin
-        - Decreases ProductSize stock for ordered size (if any)
-        - Decreases Product.stock
-        - Never runs twice (idempotent)
+        - Decreases size/product stock once
         Returns True if newly marked paid, False if already paid.
         """
         from django.db import transaction
@@ -116,8 +123,14 @@ class Order(models.Model):
                 product.save(update_fields=['stock'])
 
             order.paid = True
-            order.save(update_fields=['paid'])
+            if payer_upi_id:
+                order.payer_upi_id = payer_upi_id[:100]
+            if payment_ref:
+                order.payment_ref = payment_ref[:64]
+            order.save(update_fields=['paid', 'payer_upi_id', 'payment_ref'])
             self.paid = True
+            self.payer_upi_id = order.payer_upi_id
+            self.payment_ref = order.payment_ref
             return True
 
 

@@ -8,6 +8,19 @@ def get_upi_id():
     return (getattr(settings, 'UPI_ID', None) or '7591927789@fam').strip()
 
 
+def is_valid_upi_id(value):
+    """
+    Basic UPI ID check: something@handle (e.g. name@oksbi, 98xxxx@ybl).
+    Stops empty / spam submissions without a real-looking VPA.
+    """
+    import re
+    v = (value or '').strip().lower()
+    if not v or len(v) < 5 or len(v) > 100:
+        return False
+    # local@handle — handle is letters/digits (oksbi, ybl, paytm, fam, etc.)
+    return bool(re.match(r'^[a-z0-9._-]{2,64}@[a-z0-9]{2,20}$', v))
+
+
 def get_upi_name():
     # Empty by default — wrong payee name breaks UPI deep links for personal VPAs
     return (getattr(settings, 'UPI_MERCHANT_NAME', None) or '').strip()
@@ -235,6 +248,8 @@ def build_payment_confirmation_message(order, request=None):
         f'*Order ID:* {order_id}',
         f'*Status:* PAID ✓',
         f'*Amount received:* Rs {total:.2f}',
+        f'*Customer UPI (payer):* {getattr(order, "payer_upi_id", "") or "-"}',
+        f'*UTR / ref:* {getattr(order, "payment_ref", "") or "-"}',
         '',
         '*Customer:*',
         f'Name: {customer}',

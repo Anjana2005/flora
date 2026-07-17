@@ -31,6 +31,9 @@
         <div class="badge-paid">Paid: Yes · Stock updated</div>
         <p>Order <strong>{{ order_ref }}</strong></p>
         <p>Amount: <strong>₹{{ total }}</strong></p>
+        {% if payer_upi_id %}
+        <p>Paid from UPI: <strong>{{ payer_upi_id }}</strong></p>
+        {% endif %}
         <p style="color:#666;margin-top:1rem;">
             Admin dashboard shows <strong>Paid: Yes</strong>.
             Product size stock has been reduced.

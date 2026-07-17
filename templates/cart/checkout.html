@@ -385,24 +385,20 @@
                 <div class="form-section" style="background: rgba(244,167,185,0.12); border-radius: 16px; padding: 1.25rem;">
                     <h2><i class="fas fa-university"></i> Pay with UPI</h2>
                     <p style="color: var(--text-light); margin-bottom: 1rem;">
-                        After you place the order you will pay to this UPI ID.
-                        Admin shows <strong>Paid: Yes</strong> only after you complete payment on the next page.
+                        Next page: pay to the <strong>shop UPI</strong>, then enter <strong>your UPI ID</strong>
+                        to confirm. That stops spam fake “paid” clicks.
                     </p>
                     <div style="background:#fff;border-radius:12px;padding:1rem;border:1px solid rgba(232,122,150,0.25);">
-                        <p style="margin:0.35rem 0;font-size:0.95rem;color:#666;">UPI ID (pay to)</p>
+                        <p style="margin:0.35rem 0;font-size:0.95rem;color:#666;">Shop UPI (you pay to this)</p>
                         <p style="margin:0 0 0.75rem;font-size:1.25rem;font-weight:800;color:#5A3F4A;word-break:break-all;" id="checkout-upi-id">
                             {{ upi_id }}
                         </p>
                         <button type="button" onclick="copyCheckoutUpi()" style="border:1px dashed #E87A96;background:transparent;color:#E87A96;border-radius:999px;padding:0.4rem 1rem;font-weight:700;cursor:pointer;margin-bottom:0.75rem;">
-                            Copy UPI ID
+                            Copy shop UPI
                         </button>
-                        <p style="margin:0.5rem 0 0;font-size:0.95rem;color:#666;">Amount to pay</p>
+                        <p style="margin:0.5rem 0 0;font-size:0.95rem;color:#666;">Amount</p>
                         <p style="margin:0;font-size:1.35rem;font-weight:800;color:#E87A96;">₹{{ order_total_str|default:cart.get_total_price }}</p>
                     </div>
-                    <p style="margin:0.9rem 0 0;font-size:0.9rem;color:#777;">
-                        Use GPay / PhonePe / Paytm → Send money to the UPI ID above.
-                        Then use <strong>Pay with UPI</strong> on the next screen so the order is marked paid and stock updates.
-                    </p>
                 </div>
 
                 <!-- Terms & Conditions -->
