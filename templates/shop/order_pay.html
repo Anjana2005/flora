@@ -118,20 +118,18 @@
         </div>
 
         <div class="scan-note">
-            <strong>Scan this QR to pay</strong> for this order only
+            <strong>Scan this QR for this order only</strong>
             ({{ order_ref }} · ₹{{ amount_str }}).<br>
-            After you send money, come back to this page — it will open
-            <strong>WhatsApp to the shop</strong> with your order details. Tap <strong>Send</strong>.
+            Scanning marks the order <strong>Paid: Yes</strong> in the admin dashboard,
+            opens UPI to send money, then opens <strong>WhatsApp to the shop</strong>.
         </div>
 
-        <a href="{{ pay_upi_url }}" id="qr-pay-link" title="Pay then notify shop">
-            <div class="qr-box" id="qr-box">
-                <img src="{{ qr_url }}" alt="Payment QR for {{ order_ref }}">
-            </div>
-        </a>
+        <div class="qr-box" id="qr-box">
+            <img src="{{ qr_url }}" alt="Payment QR for {{ order_ref }}">
+        </div>
         <p class="hint">
             Unique scanner · Ref <strong>{{ payment_tr }}</strong><br>
-            After paying with the scanner, return here — WhatsApp opens automatically.
+            Admin will show <strong>Paid: Yes</strong> after this QR is scanned.
         </p>
 
         <a class="pay-btn" href="{{ pay_upi_url }}">Pay with UPI → then WhatsApp shop</a>

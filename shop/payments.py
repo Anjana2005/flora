@@ -128,24 +128,29 @@ def build_upi_qr_data_uri(upi_link, size=280):
     return f'data:image/png;base64,{b64}'
 
 
-def build_order_payment_qr(order, size=280):
+def build_order_payment_qr(order, size=280, scan_page_url=None):
     """
-    Build UPI link + unique QR for one order (amount + order id in payload).
-    Returns dict: upi_link, qr_url, order_ref, amount_str, tr
+    Build unique UPI link + QR for one order.
+
+    If scan_page_url is set (HTTPS pay-now URL), the QR encodes that URL so
+    scanning hits the website first → marks Paid in admin → then UPI/WhatsApp.
+    Otherwise QR encodes the raw upi:// link (app opens directly, site not notified).
     """
     order_ref = f'FLORA{order.id}'
     amount = order.get_total_cost()
-    # Make tr unique per order (and slightly unique if recreated)
     created = getattr(order, 'created_at', None)
     stamp = created.strftime('%H%M%S') if created else ''
     tr = build_payment_ref(order.id, stamp)
     upi_link = build_upi_link(amount, order_ref, note=order_ref, tr=tr)
+    # Prefer website URL in QR so Paid status is saved when scanner is used
+    qr_payload = scan_page_url or upi_link
     return {
         'order_ref': order_ref,
         'amount_str': _amount_str(amount),
         'tr': tr,
         'upi_link': upi_link,
-        'qr_url': build_upi_qr_url(upi_link, size=size),
+        'qr_url': build_upi_qr_url(qr_payload, size=size),
+        'scan_page_url': scan_page_url or '',
         'shop_upi_id': get_upi_id(),
     }
 

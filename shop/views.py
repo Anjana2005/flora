@@ -1483,7 +1483,11 @@ def order_pay(request, order_id):
     if order.paid:
         return redirect('shop:order_paid_success', order_id=order.id)
 
-    payment = build_order_payment_qr(order)
+    # QR encodes this HTTPS URL so scanning marks Paid in admin, then UPI + WhatsApp
+    scan_page_url = request.build_absolute_uri(
+        reverse('shop:order_launch_payment', args=[order.id]) + '?method=scan'
+    )
+    payment = build_order_payment_qr(order, scan_page_url=scan_page_url)
     order_ref = payment['order_ref']
     total = order.get_total_cost()
     upi_link = payment['upi_link']
@@ -1502,24 +1506,24 @@ def order_pay(request, order_id):
         'gpay_link': build_gpay_link(total, order_ref),
         'phonepe_link': build_phonepe_link(total, order_ref),
         'paytm_link': build_paytm_link(total, order_ref),
-        # Unique QR for this order only
+        # Unique QR — scanning hits site → Paid: Yes in dashboard
         'qr_url': payment['qr_url'],
+        'scan_page_url': scan_page_url,
         'items': order.items.select_related('product').all(),
         'pay_upi_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=upi',
         'pay_android_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=android',
         'pay_gpay_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=gpay',
         'pay_phonepe_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=phonepe',
         'pay_paytm_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=paytm',
+        'after_scan_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=after_scan',
     }
     return render(request, 'shop/order_pay.html', context)
 
 
 def order_launch_payment(request, order_id):
     """
-    After customer pays (QR scanner or pay button):
-    1) Mark paid + reduce stock (using checkout UPI ID)
-    2) Open UPI if needed
-    3) Navigate page to shop WhatsApp with full order details
+    Called when customer uses the unique order scanner OR a pay button.
+    Always sets Paid=Yes in admin (and stock), then UPI if needed, then WhatsApp shop.
     """
     from .payments import (
         build_order_payment_qr,
@@ -1543,27 +1547,41 @@ def order_launch_payment(request, order_id):
         )
         return redirect('shop:order_pay', order_id=order.id)
 
-    # Confirm paid once (anti-spam: requires checkout UPI)
+    # Critical: mark Paid so admin dashboard shows Yes after scanner payment
+    newly_paid = False
     if not order.paid:
-        order.mark_as_paid(payer_upi_id=order.payer_upi_id)
+        newly_paid = order.mark_as_paid(payer_upi_id=order.payer_upi_id)
+    # Reload from DB so paid flag is current
+    order.refresh_from_db()
 
     payment = build_order_payment_qr(order)
     order_ref = payment['order_ref']
     total = order.get_total_cost()
 
-    # after_scan / whatsapp = paid via QR already; skip opening UPI again
+    # scan = opened by scanning order QR (site hit first); still open UPI app to pay
+    # after_scan / whatsapp / done = money already sent; skip UPI open
     if method in ('after_scan', 'whatsapp', 'done'):
         pay_target = ''
+        skip_upi = True
+    elif method == 'scan':
+        # Scanner opened this page → mark paid (above) → open UPI to complete money transfer
+        pay_target = payment['upi_link']
+        skip_upi = False
     elif method == 'gpay':
         pay_target = build_gpay_link(total, order_ref)
+        skip_upi = False
     elif method == 'phonepe':
         pay_target = build_phonepe_link(total, order_ref)
+        skip_upi = False
     elif method == 'paytm':
         pay_target = build_paytm_link(total, order_ref)
+        skip_upi = False
     elif method == 'android':
         pay_target = build_android_intent_link(total, order_ref)
+        skip_upi = False
     else:
         pay_target = payment['upi_link']
+        skip_upi = False
 
     whatsapp_url = build_payment_confirmation_whatsapp_url(order, request)
     success_url = reverse('shop:order_paid_success', args=[order.id])
@@ -1581,7 +1599,9 @@ def order_launch_payment(request, order_id):
             'success_url': success_url,
             'items': order.items.select_related('product').all(),
             'payer_upi_id': order.payer_upi_id,
-            'skip_upi': method in ('after_scan', 'whatsapp', 'done'),
+            'skip_upi': skip_upi,
+            'newly_paid': newly_paid,
+            'is_paid': order.paid,
         },
     )
 

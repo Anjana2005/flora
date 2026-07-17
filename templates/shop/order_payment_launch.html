@@ -45,12 +45,13 @@
 <div class="launch-wrap">
     <div class="launch-card">
         <h1>Order {{ order_ref }}</h1>
-        <p class="status">✓ Paid · Stock updated</p>
+        <p class="status">✓ Paid: Yes (admin dashboard) · Stock updated</p>
         <p>Amount: <strong>₹{{ amount_str }}</strong></p>
         {% if payer_upi_id %}
         <p>Customer UPI: <strong>{{ payer_upi_id }}</strong></p>
         {% endif %}
         <p class="hint" id="status-text">
+            Order is marked <strong>Paid</strong> for the shop admin.
             Opening WhatsApp to the shop with full order details…
             Tap <strong>Send</strong> in WhatsApp.
         </p>
