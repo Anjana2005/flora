@@ -4,10 +4,24 @@ from django.utils.text import slugify
 from django.utils import timezone
 from django.db.models import Index, UniqueConstraint
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import InMemoryUploadedFile, TemporaryUploadedFile
 from flora_project.settings import compress_image
 
-def get_total_cost(self):
-    return sum(item.price * item.quantity for item in self.items.all())
+
+def _maybe_compress(image_field):
+    """Compress only brand-new uploads (not already-stored files)."""
+    if not image_field:
+        return image_field
+    # Fresh upload object
+    if isinstance(image_field, (InMemoryUploadedFile, TemporaryUploadedFile)):
+        return compress_image(image_field)
+    # FieldFile wrapping a new upload
+    f = getattr(image_field, 'file', None)
+    if isinstance(f, (InMemoryUploadedFile, TemporaryUploadedFile)):
+        return compress_image(image_field)
+    return image_field
+
+
 class Order(models.Model):
     first_name = models.CharField(max_length=200)
     last_name = models.CharField(max_length=200, blank=True)
@@ -56,8 +70,7 @@ class Category(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.name)
-        if self.image:
-            self.image = compress_image(self.image)
+        self.image = _maybe_compress(self.image)
         super().save(*args, **kwargs)
 
     def get_absolute_url(self):
@@ -136,8 +149,7 @@ class ProductImage(models.Model):
         return f"Image for {self.product.name}"
 
     def save(self, *args, **kwargs):
-        if self.image:
-            self.image = compress_image(self.image)
+        self.image = _maybe_compress(self.image)
         super().save(*args, **kwargs)
 
 
@@ -159,8 +171,7 @@ class OfferSale(models.Model):
         return f"OfferSale #{self.id}"
 
     def save(self, *args, **kwargs):
-        if self.image:
-            self.image = compress_image(self.image)
+        self.image = _maybe_compress(self.image)
         super().save(*args, **kwargs)
 
     def is_current(self):
@@ -280,7 +291,5 @@ class Blog(models.Model):
         return f"{self.title} by {self.author.username}"
 
     def save(self, *args, **kwargs):
-        if self.image:
-            self.image = compress_image(self.image)
+        self.image = _maybe_compress(self.image)
         super().save(*args, **kwargs)
- 

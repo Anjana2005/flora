@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Pay for {{ order_ref }} - Flora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pay-wrap {
+        max-width: 560px;
+        margin: 2.5rem auto 4rem;
+        padding: 0 1rem;
+    }
+    .pay-card {
+        background: rgba(255,255,255,0.96);
+        border: 1px solid rgba(232,122,150,0.18);
+        border-radius: 24px;
+        box-shadow: 0 16px 36px rgba(232,122,150,0.12);
+        padding: 2rem 1.5rem;
+        text-align: center;
+    }
+    .pay-card h1 {
+        font-family: 'Playfair Display', serif;
+        color: #5A3F4A;
+        font-size: 1.8rem;
+        margin-bottom: 0.4rem;
+    }
+    .pay-amount {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #E87A96;
+        margin: 0.75rem 0 1.25rem;
+    }
+    .qr-box {
+        background: #fff;
+        border-radius: 16px;
+        padding: 1rem;
+        display: inline-block;
+        border: 1px solid rgba(232,122,150,0.15);
+        margin-bottom: 1rem;
+    }
+    .qr-box img {
+        width: 240px;
+        height: 240px;
+        display: block;
+    }
+    .upi-id-box {
+        background: rgba(244,167,185,0.15);
+        border-radius: 12px;
+        padding: 0.9rem 1rem;
+        margin: 1rem 0;
+        font-size: 1.05rem;
+        word-break: break-all;
+    }
+    .upi-id-box strong { color: #5A3F4A; }
+    .pay-btn {
+        display: block;
+        width: 100%;
+        margin: 0.55rem 0;
+        padding: 0.95rem 1rem;
+        border-radius: 999px;
+        border: none;
+        font-weight: 700;
+        font-size: 1rem;
+        text-decoration: none;
+        color: #fff;
+        background: linear-gradient(135deg, #F4A7B9, #E87A96);
+        box-shadow: 0 10px 22px rgba(232,122,150,0.28);
+    }
+    .pay-btn.gpay { background: linear-gradient(135deg, #4285F4, #34A853); }
+    .pay-btn.phonepe { background: linear-gradient(135deg, #5f259f, #7b3fb8); }
+    .pay-btn.wa { background: linear-gradient(135deg, #25D366, #128C7E); }
+    .pay-btn.secondary {
+        background: #fff;
+        color: #E87A96;
+        border: 2px solid #E87A96;
+        box-shadow: none;
+    }
+    .hint {
+        color: #777;
+        font-size: 0.9rem;
+        margin-top: 0.75rem;
+        line-height: 1.45;
+    }
+    .items {
+        text-align: left;
+        margin: 1.25rem 0;
+        font-size: 0.95rem;
+        color: #5A3F4A;
+    }
+    .items li { margin: 0.35rem 0; }
+    .copy-btn {
+        margin-top: 0.5rem;
+        background: transparent;
+        border: 1px dashed #E87A96;
+        color: #E87A96;
+        border-radius: 999px;
+        padding: 0.45rem 1rem;
+        cursor: pointer;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pay-wrap">
+    <div class="pay-card">
+        <h1>Complete your payment</h1>
+        <p>Order <strong>{{ order_ref }}</strong></p>
+        <div class="pay-amount">₹{{ total }}</div>
+
+        <div class="qr-box">
+            <img src="{{ qr_url }}" alt="UPI QR code for payment">
+        </div>
+        <p class="hint">Scan this QR with any UPI app (GPay, PhonePe, Paytm, BHIM)</p>
+
+        <div class="upi-id-box">
+            Pay to: <strong id="upi-id">{{ upi_id }}</strong><br>
+            Name: <strong>{{ upi_name }}</strong><br>
+            Amount: <strong>₹{{ total }}</strong><br>
+            Note: <strong>{{ order_ref }}</strong>
+        </div>
+        <button type="button" class="copy-btn" onclick="copyUpi()">Copy UPI ID</button>
+
+        <!-- Direct app intents — work on mobile -->
+        <a class="pay-btn" href="{{ upi_link }}">Pay with any UPI app</a>
+        <a class="pay-btn gpay" href="{{ gpay_link }}">Pay with Google Pay</a>
+        <a class="pay-btn phonepe" href="{{ phonepe_link }}">Pay with PhonePe</a>
+
+        <p class="hint">
+            On phone: tap a button above.<br>
+            On computer: scan the QR with your phone’s UPI app.
+        </p>
+
+        <ul class="items">
+            {% for item in items %}
+            <li>
+                {{ item.product.name }}{% if item.size %} ({{ item.size }}){% endif %}
+                × {{ item.quantity }} — ₹{{ item.price }}
+            </li>
+            {% endfor %}
+        </ul>
+
+        <a class="pay-btn wa" href="{{ whatsapp_url }}" target="_blank" rel="noopener">
+            Notify shop on WhatsApp after paying
+        </a>
+        <a class="pay-btn secondary" href="{% url 'shop:home' %}">Back to shop</a>
+    </div>
+</div>
+
+<script>
+function copyUpi() {
+    var id = document.getElementById('upi-id').innerText;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(id).then(function () {
+            alert('UPI ID copied: ' + id);
+        });
+    } else {
+        prompt('Copy UPI ID:', id);
+    }
+}
+</script>
+{% endblock %}

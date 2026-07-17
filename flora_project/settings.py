@@ -202,3 +202,8 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
 
 # Behind Render's proxy
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Payments / order notifications
+UPI_ID = os.environ.get('UPI_ID', 'flora1101@axl')
+UPI_MERCHANT_NAME = os.environ.get('UPI_MERCHANT_NAME', 'Flora Store')
+WHATSAPP_ORDER_NUMBER = os.environ.get('WHATSAPP_ORDER_NUMBER', '919074860867')

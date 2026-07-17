@@ -2,9 +2,10 @@
 URL configuration for Flora project.
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.static import serve
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -12,10 +13,23 @@ urlpatterns = [
     path('cart/', include('cart.urls', namespace='cart')),
 ]
 
-# Serve media in development; static is handled by WhiteNoise in production.
+# Always serve uploaded media (admin product images, etc.).
+# Required on Render where DEBUG=False — without this, /media/* is 404 for users.
+urlpatterns += [
+    re_path(
+        r'^media/(?P<path>.*)$',
+        serve,
+        {'document_root': settings.MEDIA_ROOT},
+    ),
+]
+
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0] if settings.STATICFILES_DIRS else settings.STATIC_ROOT)
+    urlpatterns += static(
+        settings.STATIC_URL,
+        document_root=settings.STATICFILES_DIRS[0]
+        if settings.STATICFILES_DIRS
+        else settings.STATIC_ROOT,
+    )
 
 # Customize admin site
 admin.site.site_header = "Flora Admin"

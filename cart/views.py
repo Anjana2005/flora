@@ -1,12 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.urls import reverse
 from django.views.decorators.http import require_POST
 from django.contrib import messages
-from urllib.parse import quote
 
 from shop.models import Product, Order, OrderItem
 from .cart import Cart
-from urllib.parse import quote
 
 
 @require_POST
@@ -51,35 +48,16 @@ def cart_add(request, product_id):
 
 @require_POST
 def cart_remove(request, product_id):
-    """Remove product from cart"""
     cart = Cart(request)
     product = get_object_or_404(Product, id=product_id)
     size = request.POST.get('size') or None
     cart.remove(product, size)
-    size_text = f" (Size: {dict(product.sizes.model.SIZE_CHOICES).get(size, size)})" if size else ""
-    messages.success(request, f'{product.name}{size_text} removed from cart!')
+    messages.success(request, 'Item removed from cart.')
     return redirect('cart:cart_detail')
-
-
-def cart_detail(request):
-    """Display cart contents"""
-    cart = Cart(request)
-
-    for item in cart:
-        item['update_quantity_form'] = {
-            'quantity': item['quantity'],
-            'override': True
-        }
-
-    context = {
-        'cart': cart,
-    }
-    return render(request, 'cart/detail.html', context)
 
 
 @require_POST
 def cart_update(request, product_id):
-    """Update product quantity in cart"""
     cart = Cart(request)
     product = get_object_or_404(Product, id=product_id)
     quantity = int(request.POST.get('quantity', 1))
@@ -106,14 +84,18 @@ def cart_update(request, product_id):
         messages.success(request, 'Cart updated!')
     else:
         cart.remove(product, size)
-        size_text = f" (Size: {dict(product.sizes.model.SIZE_CHOICES).get(size, size)})" if size else ""
-        messages.success(request, f'{product.name}{size_text} removed from cart!')
+        messages.success(request, 'Item removed from cart!')
 
     return redirect('cart:cart_detail')
 
 
+def cart_detail(request):
+    cart = Cart(request)
+    return render(request, 'cart/detail.html', {'cart': cart})
+
+
 def checkout(request):
-    """Checkout page - place order and open WhatsApp with plain-text order details."""
+    """Checkout — place order then go to UPI payment page."""
     cart = Cart(request)
 
     if len(cart) == 0:
@@ -131,10 +113,14 @@ def checkout(request):
             postal = request.POST.get('postal', '').strip()
             country = request.POST.get('country', 'India').strip() or 'India'
 
+            if not first_name or not phone or not address:
+                messages.error(request, 'Please fill name, phone and address.')
+                return render(request, 'cart/checkout.html', {'cart': cart})
+
             order = Order.objects.create(
                 first_name=first_name,
                 last_name=last_name,
-                email=email,
+                email=email or f'order{phone}@flora.local',
                 phone=phone,
                 address=address,
                 city=city,
@@ -151,75 +137,11 @@ def checkout(request):
                     size=item.get('size') or '',
                 )
 
-            order_items = OrderItem.objects.select_related(
-                'product', 'product__category'
-            ).filter(order=order)
-
-            order_id = f"FLORA{order.id}"
-            full_address = ", ".join(part for part in [address, city, postal, country] if part)
-
-            lines = [
-                "*New Order - Flora*",
-                "",
-                f"Order ID: {order_id}",
-                f"Customer: {first_name} {last_name}".strip(),
-                f"Phone: {phone}",
-                f"Address: {full_address}",
-                "",
-                "*Order Details:*",
-            ]
-
-            total = 0
-            for item in order_items:
-                category_name = item.product.category.name if item.product and item.product.category else "N/A"
-                product_name = item.product.name if item.product else "Deleted Product"
-                size = item.size or "Not selected"
-                qty = item.quantity
-                price = float(item.price)
-                subtotal = price * qty
-                total += subtotal
-
-                lines.extend([
-                    f"* {product_name}",
-                    f"Category: {category_name}",
-                    f"Size: {size}",
-                    f"Qty: {qty}",
-                    f"Price: ₹{subtotal:.2f}",
-                    "",
-                ])
-
-            maps_query = quote(full_address or address or "")
-            maps_link = "https://www.google.com/maps/search/?api=1&query=" + maps_query
-            merchant_name = "Flora Store"
-            upi_link = (
-                f"upi://pay?pa=flora1101@axl"
-                f"&pn={quote(merchant_name)}"
-                f"&am={total:.2f}"
-                f"&cu=INR"
-                f"&tn={quote(f'Order {order_id}')}" 
-            )
-
-            lines.extend([
-                f"*Total Amount:* ₹{total:.2f}",
-                "",
-                "Location Map:",
-                maps_link,
-                "",
-                "Pay here:",
-                upi_link,
-            ])
-
-            message = "\n".join(lines)
             cart.clear()
-
-            whatsapp_number = "919074860867"
-            whatsapp_url = "https://wa.me/" + whatsapp_number + "?text=" + quote(message)
-            return redirect(whatsapp_url)
+            request.session['last_order_id'] = order.id
+            return redirect('shop:order_pay', order_id=order.id)
 
         except Exception as e:
             messages.error(request, f'Error placing order: {str(e)}')
 
-    context = {
-        'cart': cart,
-    }
-    return render(request, 'cart/checkout.html', context)
+    return render(request, 'cart/checkout.html', {'cart': cart})

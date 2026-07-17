@@ -26,7 +26,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
 from datetime import datetime
-from .models import Category, Product, Contact, Order, OfferSale
+from .models import Category, Product, Contact, Order, OrderItem, OfferSale
 
 # def cart_add(request, product_id):
 #     product = Product.objects.get(id=product_id)
@@ -1294,128 +1294,101 @@ def admin_offer_delete(request, id):
         return redirect('shop:admin_offers')
 
     return render(request, 'shop/admin/offer_delete_confirm.html', {'offer': offer})
-from django.shortcuts import render, redirect
-from urllib.parse import quote
-
-from cart.cart import Cart
-from .models import Product, Order, OrderItem
 
 
 def checkout(request):
+    """Place order, then show UPI payment page (also used by cart checkout form)."""
+    from cart.cart import Cart
+    from .payments import build_order_whatsapp_url
+
     cart = Cart(request)
 
+    if len(cart) == 0 and request.method != "POST":
+        messages.warning(request, 'Your cart is empty!')
+        return redirect('shop:product_list')
+
     if request.method == "POST":
-        first_name = request.POST.get("first_name")
-        last_name = request.POST.get("last_name", "")
-        email = request.POST.get("email", "")
-        phone = request.POST.get("phone")
-        address = request.POST.get("address")
-        city = request.POST.get("city", "")
-        postal = request.POST.get("postal", "")
-        country = request.POST.get("country", "India")
+        try:
+            first_name = request.POST.get("first_name", "").strip()
+            last_name = request.POST.get("last_name", "").strip()
+            email = request.POST.get("email", "").strip()
+            phone = request.POST.get("phone", "").strip()
+            address = request.POST.get("address", "").strip()
+            city = request.POST.get("city", "").strip()
+            postal = request.POST.get("postal", "").strip()
+            country = request.POST.get("country", "India").strip() or "India"
 
-        # ✅ Save Order to database
-        order = Order.objects.create(
-            first_name=first_name,
-            last_name=last_name,
-            email=email,
-            phone=phone,
-            address=address,
-            city=city,
-            postal_code=postal,
-            country=country,
-        )
+            if not first_name or not phone or not address:
+                messages.error(request, 'Please fill name, phone and address.')
+                return render(request, "cart/checkout.html", {"cart": cart})
 
-        # ✅ Save each OrderItem to database using Cart class
-        for item in cart:
-            OrderItem.objects.create(
-                order=order,
-                product=item['product'],
-                price=item['price'],
-                quantity=item['quantity'],
-                size=item.get('size') or "",
+            order = Order.objects.create(
+                first_name=first_name,
+                last_name=last_name,
+                email=email or f"order{phone}@flora.local",
+                phone=phone,
+                address=address,
+                city=city,
+                postal_code=postal,
+                country=country,
             )
 
-        # ✅ Fetch order items FROM DATABASE with all related data
-        order_items = OrderItem.objects.select_related(
-            'product', 'product__category'
-        ).filter(order=order)
+            for item in cart:
+                OrderItem.objects.create(
+                    order=order,
+                    product=item['product'],
+                    price=item['price'],
+                    quantity=item['quantity'],
+                    size=item.get('size') or "",
+                )
 
-        # Build WhatsApp message using real newlines (not HTML <br>)
-        order_id = f"FLORA{order.id}"
-        full_address = ", ".join(part for part in [address, city, postal, country] if part)
-
-        lines = [
-            "*New Order - Flora*",
-            "",
-            f"Order ID: {order_id}",
-            f"Customer: {first_name} {last_name}".strip(),
-            f"Phone: {phone}",
-            f"Address: {full_address}",
-            "",
-            "*Order Details:*",
-        ]
-
-        total = 0
-        for item in order_items:
-            category_name = item.product.category.name if item.product and item.product.category else "N/A"
-            product_name = item.product.name if item.product else "Deleted Product"
-            size = item.size or "Not selected"
-            qty = item.quantity
-            price = float(item.price)
-            subtotal = price * qty
-            total += subtotal
-
-            lines.extend([
-                f"* {product_name}",
-                f"Category: {category_name}",
-                f"Size: {size}",
-                f"Qty: {qty}",
-                f"Price: ₹{subtotal:.2f}",
-                "",
-            ])
-
-        maps_query = quote(full_address or address or "")
-        maps_link = "https://www.google.com/maps/search/?api=1&query=" + maps_query
-        merchant_name = "Flora Store"
-        upi_link = (
-            f"upi://pay?pa=flora1101@axl"
-            f"&pn={quote(merchant_name)}"
-            f"&am={total:.2f}"
-            f"&cu=INR"
-            f"&tn={quote(f'Order {order_id}') }"
-        )
-
-        lines.extend([
-            f"*Total Amount:* ₹{total:.2f}",
-            "",
-            "Location Map:",
-            maps_link,
-            "",
-            "Pay here:",
-            upi_link,
-        ])
-
-        message = "\n".join(lines)
-
-        # Clear cart after order placed
-        cart.clear()
-
-        whatsapp_number = "919074860867"
-        whatsapp_url = "https://wa.me/" + whatsapp_number + "?text=" + quote(message)
-
-        return redirect(whatsapp_url)
+            cart.clear()
+            request.session['last_order_id'] = order.id
+            return redirect('shop:order_pay', order_id=order.id)
+        except Exception as e:
+            messages.error(request, f'Error placing order: {str(e)}')
 
     return render(request, "cart/checkout.html", {"cart": cart})
 
 
-def cart_add(request, product_id):
+def order_pay(request, order_id):
+    """Show working UPI payment options + QR after checkout."""
+    from .payments import (
+        build_upi_link,
+        build_upi_qr_url,
+        build_gpay_link,
+        build_phonepe_link,
+        build_order_whatsapp_url,
+        get_upi_id,
+        get_upi_name,
+    )
+
+    order = get_object_or_404(Order, id=order_id)
+    order_ref = f"FLORA{order.id}"
+    total = order.get_total_cost()
+    upi_link = build_upi_link(total, order_ref)
+    context = {
+        'order': order,
+        'order_ref': order_ref,
+        'total': total,
+        'upi_id': get_upi_id(),
+        'upi_name': get_upi_name(),
+        'upi_link': upi_link,
+        'gpay_link': build_gpay_link(total, order_ref),
+        'phonepe_link': build_phonepe_link(total, order_ref),
+        'qr_url': build_upi_qr_url(upi_link),
+        'whatsapp_url': build_order_whatsapp_url(order, request),
+        'items': order.items.select_related('product').all(),
+    }
+    return render(request, 'shop/order_pay.html', context)
+
+
+def cart_add_legacy(request, product_id):
+    # legacy unused helper kept from older code path
     product = Product.objects.get(id=product_id)
     cart = request.session.get("cart", {})
 
     size = request.POST.get("size")
-    print("SIZE FROM POST:", repr(size))  # ← add this line
-
     quantity = int(request.POST.get("quantity", 1))
 
     cart[str(product_id)] = {
