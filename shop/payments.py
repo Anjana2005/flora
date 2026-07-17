@@ -151,7 +151,7 @@ def upi_app_response(
   Note auto-filled: <code>{safe_note}</code></p>
   <a class="btn" id="upi-btn" href="{safe_upi}">Open UPI &amp; pay</a>
   <a class="btn" href="{safe_intent}" style="background:#5A3F4A">Open on Android</a>
-  <p style="margin-top:1rem;font-size:.85rem">No extra confirm needed — this order is already marked Paid in admin. Finish the UPI payment for money to transfer.</p>
+  <p style="margin-top:1rem;font-size:.85rem">Finish payment in the app until it says <strong>successful</strong>. If it says money not debited, go back and <strong>scan the QR inside GPay</strong> (not only this browser button).</p>
 </div>
 <script>
 (function(){{
@@ -174,22 +174,24 @@ def upi_app_response(
 
 def build_upi_link(amount, order_ref, note=None, tr=None):
     """
-    Pure UPI intent so GPay/PhonePe auto-fill:
-      - Payee (pa)
-      - Amount (am)
-      - Note / remarks (tn)  ← order code e.g. FLORA30
+    Pure personal-UPI pay string for GPay/PhonePe (money can actually debit).
 
-    QR and "Open UPI" both use this exact string — never a website URL.
+    Never encode a website URL in the QR — that causes
+    "money has not been debited" because apps cannot settle a bank transfer
+    from an https link.
+
+    Unique per order via amount + tn (order number e.g. FLORA30).
     """
     pa = (get_upi_id() or '').strip().lower()
+    # Remove accidental spaces
+    pa = ''.join(pa.split())
     am = _amount_str(amount)
-    # Order note that must appear in the app Remarks / Message field
-    tn = sanitize_upi_note(note or order_ref, max_len=30).replace(' ', '')
+    tn = sanitize_upi_note(note or order_ref, max_len=20).replace(' ', '')
     if not tn:
-        tn = 'FloraOrder'
+        tn = 'Flora'
 
-    # Standard NPCI order: pa, am, cu, tn — note is tn
-    # Do not use website URLs, tr, or wrong pn (breaks personal UPI).
+    # Minimal collect request — personal VPA friendly
+    # pa + am + cu required; tn = order number in remarks
     return f'upi://pay?pa={pa}&am={am}&cu=INR&tn={tn}'
 
 
@@ -246,12 +248,11 @@ def build_upi_qr_data_uri(upi_link, size=280):
 
 def build_order_payment_qr(order, size=280, scan_page_url=None, slot=None):
     """
-    Unique scanner per order number (FLORA#).
+    Unique pure-UPI scanner per order (so money can debit).
 
-    - upi_link: pure UPI with that order's amount + note (tn=FLORA#)
-    - If scan_page_url given: QR encodes the order-only site URL so scanning
-      auto-marks that order Paid (no customer confirm), then opens UPI with note
-    - Different orders → different QR (different note / amount / URL)
+    QR payload is ALWAYS upi://pay?... never https://...
+    Different orders → different QR (FLORA# note + that order's amount).
+    scan_page_url is ignored for the image (kept for API compat only).
     """
     order_ref = build_order_note_code(order.id)
     payment_note = order_ref
@@ -260,17 +261,9 @@ def build_order_payment_qr(order, size=280, scan_page_url=None, slot=None):
         slot, _ = current_qr_slot()
     tr = build_payment_ref(order.id, f'O{order.id}')
 
+    # Pure UPI only — required for bank debit in GPay/PhonePe
     upi_link = build_upi_link(amount, order_ref, note=payment_note)
-
-    # Unique per-order scanner: site URL includes order id + note
-    if scan_page_url:
-        sep = '&' if '?' in scan_page_url else '?'
-        qr_payload = (
-            f'{scan_page_url}{sep}note={quote(payment_note, safe="")}'
-            f'&order={order.id}'
-        )
-    else:
-        qr_payload = upi_link
+    qr_payload = upi_link
 
     return {
         'order_ref': order_ref,
@@ -283,7 +276,7 @@ def build_order_payment_qr(order, size=280, scan_page_url=None, slot=None):
         'upi_link': upi_link,
         'android_intent': build_android_upi_intent(upi_link),
         'qr_url': build_upi_qr_url(qr_payload, size=size),
-        'scan_page_url': scan_page_url or '',
+        'scan_page_url': '',
         'shop_upi_id': get_upi_id(),
     }
 

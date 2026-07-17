@@ -223,47 +223,52 @@
         </div>
         {% endif %}
 
-        <!-- Unique scanner for this order number only -->
+        <!-- Pure UPI QR — required so money can actually be debited -->
         <div class="scanner-section">
-            <h2><i class="fas fa-qrcode"></i> Order scanner</h2>
+            <h2><i class="fas fa-qrcode"></i> UPI scanner · {{ order_ref }}</h2>
             <p style="font-size:1.35rem;font-weight:900;color:#E87A96;margin:0.25rem 0 0.5rem;letter-spacing:0.04em;">
                 {{ order_ref }}
             </p>
             <p class="hint" style="margin-top:0;text-align:center;">
-                <strong>This QR is only for order {{ order_ref }}</strong>
-                (different from other orders).<br>
-                Scan it → admin becomes <strong>Paid: Yes</strong> automatically
-                (you do <strong>not</strong> need to confirm) → UPI opens with note
-                <strong>{{ payment_note|default:order_ref }}</strong> filled.
+                <strong>Real UPI QR</strong> (not a website link) — unique for this order.<br>
+                Open <strong>GPay / PhonePe → Scan QR</strong>, check amount &amp; note
+                <strong>{{ payment_note|default:order_ref }}</strong>, enter PIN until
+                <strong>Payment successful</strong>.
             </p>
             {% if qr_url %}
             <div class="qr-wrap">
-                <img src="{{ qr_url }}" alt="Scanner for order {{ order_ref }}">
+                <img src="{{ qr_url }}" alt="UPI {{ shop_upi_id }} {{ order_ref }} ₹{{ amount_str }}">
             </div>
             <p style="font-weight:800;margin:0.5rem 0 0;color:#5A3F4A;">{{ order_ref }} · ₹{{ amount_str }}</p>
             {% endif %}
             <div class="manual-box">
-                <div>Order: <code id="copy-note">{{ payment_note|default:order_ref }}</code></div>
+                <div>Order note: <code id="copy-note">{{ payment_note|default:order_ref }}</code></div>
                 <div>Shop UPI: <code id="shop-upi-copy">{{ shop_upi_id }}</code></div>
                 <div>Amount: <code>₹{{ amount_str }}</code></div>
             </div>
             {% if open_upi_url %}
             <a class="btn-pay" href="{{ open_upi_url }}" style="margin-top:0.85rem;">
-                Scan / open this order’s UPI (auto Paid: Yes)
+                Open UPI app (note {{ payment_note|default:order_ref }})
             </a>
             {% endif %}
             <button type="button" class="btn-secondary" id="copy-upi-btn" style="cursor:pointer;width:100%;font-family:inherit;margin-top:0.55rem;">
                 Copy shop UPI ID
             </button>
             <button type="button" class="btn-secondary" id="copy-note-btn" style="cursor:pointer;width:100%;font-family:inherit;">
-                Copy order note {{ payment_note|default:order_ref }}
+                Copy order note
             </button>
         </div>
 
         <div class="note">
-            <strong>Unique scanner:</strong> Order 30 → <code>FLORA30</code>, Order 31 → <code>FLORA31</code>, each QR different.<br>
-            <strong>No customer confirm:</strong> Using this order’s scanner marks admin
-            <strong>Paid: Yes ✓</strong> for that order only, then opens UPI so money can transfer.
+            <strong>Why “money has not been debited” happened:</strong>
+            the old QR was a <em>website</em> link. Banks cannot take money from that —
+            only from a real <code>upi://</code> QR. This page now uses pure UPI.<br><br>
+            <strong>How to pay:</strong> GPay → Scan QR → confirm
+            <strong>{{ shop_upi_id }}</strong> · ₹{{ amount_str }} · note
+            <strong>{{ payment_note|default:order_ref }}</strong> → PIN → success.<br>
+            If scan still fails: Pay to UPI ID manually with that amount and note.<br><br>
+            Each order has a different QR (different note/amount).
+            “Open UPI app” also sets admin <strong>Paid: Yes</strong> for this order.
         </div>
 
         <ul class="items">

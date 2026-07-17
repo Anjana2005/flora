@@ -1466,8 +1466,8 @@ def checkout(request):
 
 def order_pay(request, order_id):
     """
-    Unique scanner per order number (FLORA#).
-    Scanning this order's QR auto-marks Paid (no customer confirm), then opens UPI.
+    Unique pure-UPI scanner per order (FLORA# + amount).
+    QR is upi:// only so GPay can debit money. Not a website link.
     """
     from .payments import build_order_payment_qr, get_upi_id
     from .secure_payments import razorpay_configured, create_razorpay_order
@@ -1488,11 +1488,9 @@ def order_pay(request, order_id):
             rz_error = str(e)
             secure = False
 
-    # Unique order scanner URL → auto Paid for THIS order only
-    scan_page_url = request.build_absolute_uri(
-        reverse('shop:order_launch_payment', args=[order.id]) + '?method=scan'
-    )
-    payment = build_order_payment_qr(order, scan_page_url=scan_page_url)
+    # Always pure UPI QR (money can debit). Unique note per order.
+    payment = build_order_payment_qr(order)
+    # Open via site: auto-mark this order Paid, then open same UPI link
     open_upi_url = reverse('shop:order_launch_payment', args=[order.id]) + (
         f'?method=scan&note={payment["order_ref"]}'
     )
