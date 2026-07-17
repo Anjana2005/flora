@@ -106,16 +106,27 @@
             <img id="qr-img" src="{{ qr_url }}" alt="UPI payment QR for {{ order_ref }}">
         </div>
 
-        <div class="timer">New scanner in <span id="countdown">{{ seconds_left }}</span>s</div>
-        <p class="hint">
-            Payment <strong>only via this QR</strong>. It changes every <strong>5 minutes</strong>
-            for security. Scan with GPay / PhonePe / any UPI app.
+        <p class="hint" style="margin-top:0.85rem;">
+            <strong>Fast pay:</strong> open GPay / PhonePe → Scan QR → Pay.<br>
+            Amount is already filled. Payment usually finishes in a few seconds.
         </p>
 
+        <a id="pay-now-btn" href="{{ scan_page_url }}"
+           style="display:block;margin:1rem 0 0.5rem;padding:0.9rem 1rem;background:#E87A96;color:#fff;border-radius:14px;font-weight:800;text-decoration:none;">
+            Open UPI app now
+        </a>
+        <a id="wa-after-btn" href="{% url 'shop:order_launch_payment' order.id %}?method=wa"
+           style="display:block;margin:0.45rem 0 0;padding:0.85rem 1rem;background:#25D366;color:#fff;border-radius:14px;font-weight:800;text-decoration:none;">
+            After pay → WhatsApp shop (Paid: Yes)
+        </a>
+
+        <div class="timer" style="font-size:0.85rem;font-weight:600;color:#999;margin-top:1rem;">
+            QR refreshes in <span id="countdown">{{ seconds_left }}</span>s
+        </div>
+
         <div class="note">
-            <strong>How to pay:</strong> Scan this QR with any UPI app and complete payment.<br>
-            Scanning this order’s QR also sets admin to <strong>Paid: Yes</strong>
-            and opens <strong>WhatsApp to the shop</strong> — tap <strong>Send</strong>.
+            <strong>Why it felt slow before:</strong> the site sometimes sleeps on free hosting
+            (first open can take 30–50s). The QR now opens your UPI app directly — much faster.
         </div>
 
         <ul class="items">

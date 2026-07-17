@@ -53,12 +53,12 @@ def _amount_str(amount):
     return f"{float(amount):.2f}"
 
 
-# Payment QR is valid for this many seconds, then rebuilt with a new code
-QR_ROTATE_SECONDS = 300  # 5 minutes
+# How often the on-screen QR refreshes (new tr code). Longer = less flicker.
+QR_ROTATE_SECONDS = 600  # 10 minutes
 
 
 def current_qr_slot(now=None):
-    """2-minute time bucket for rotating scanners."""
+    """Time bucket for rotating scanners."""
     import time
     t = int(now if now is not None else time.time())
     return t // QR_ROTATE_SECONDS, t
@@ -82,7 +82,7 @@ def build_payment_ref(order_id, extra=''):
 def build_upi_link(amount, order_ref, note=None, tr=None):
     """
     Unique UPI pay intent for a specific order / QR time slot.
-    Includes amount + unique tr so each scanner is different.
+    Pure upi:// link so GPay/PhonePe open payment instantly.
     """
     pa = get_upi_id()
     am = _amount_str(amount)
@@ -134,7 +134,6 @@ def build_upi_qr_data_uri(upi_link, size=280):
     qr.add_data(upi_link)
     qr.make(fit=True)
     img = qr.make_image(fill_color='black', back_color='white')
-    # Resize roughly to requested size
     try:
         img = img.resize((size, size))
     except Exception:
@@ -149,24 +148,18 @@ def build_order_payment_qr(order, size=280, scan_page_url=None, slot=None):
     """
     Build UPI link + QR for one order.
 
-    Scanner rotates every QR_ROTATE_SECONDS (2 minutes) via a time slot in `tr`,
-    so the QR code changes regularly for the same order amount.
+    Prefer pure upi:// in the QR so GPay/PhonePe open payment instantly.
+    (Admin Paid is set when customer opens the pay-now link / notify path.)
     """
     order_ref = f'FLORA{order.id}'
     amount = order.get_total_cost()
     if slot is None:
         slot, _ = current_qr_slot()
-    # Unique ref every 2 minutes: FLORA12S1234567
     tr = build_payment_ref(order.id, f'S{slot}')
     upi_link = build_upi_link(amount, order_ref, note=order_ref, tr=tr)
 
-    # If scan_page_url given, append slot so each 2-min QR is a different site URL
-    if scan_page_url:
-        sep = '&' if '?' in scan_page_url else '?'
-        qr_payload = f'{scan_page_url}{sep}slot={slot}'
-    else:
-        # Pure UPI QR (payment app opens scanner amount)
-        qr_payload = upi_link
+    # Pure UPI in QR = payment app opens in ~1 second (no website wait)
+    qr_payload = upi_link
 
     return {
         'order_ref': order_ref,
