@@ -244,9 +244,20 @@
             </div>
             {% if open_upi_url %}
             <a class="btn-pay" href="{{ open_upi_url }}" style="margin-top:0.85rem;">
-                Open UPI app — note auto-filled
+                Step 1 · Open UPI app (pay now)
             </a>
             {% endif %}
+
+            <!-- Step 2: bank never notifies the website — customer updates admin after real pay -->
+            <a class="btn-pay" href="{{ confirm_url }}"
+               style="margin-top:0.75rem;background:#25D366;box-shadow:0 10px 22px rgba(37,211,102,0.28);">
+                Step 2 · I paid successfully → Paid: Yes in admin
+            </a>
+            <p class="hint" style="text-align:center;margin-top:0.5rem;">
+                After GPay/PhonePe shows <strong>Payment successful</strong>, tap the green button.
+                Only then the admin dashboard shows <strong>Paid: Yes ✓</strong>.
+            </p>
+
             <button type="button" class="btn-secondary" id="copy-upi-btn" style="cursor:pointer;width:100%;font-family:inherit;margin-top:0.55rem;">
                 Copy shop UPI ID
             </button>
@@ -256,12 +267,11 @@
         </div>
 
         <div class="note">
-            <strong>How note works:</strong> QR encodes
-            <code>upi://pay?pa=…&amp;am=…&amp;tn={{ payment_note|default:order_ref }}</code>.
-            After scan / Open UPI, check <strong>Remarks / Message</strong> shows
-            <strong>{{ payment_note|default:order_ref }}</strong>, then enter PIN.<br><br>
-            Prefer <strong>Scan QR inside GPay/PhonePe</strong> for best auto-fill.
-            Admin stays <strong>Paid: No</strong> until money is received and shop marks Paid.
+            <strong>Why admin was empty after scan:</strong>
+            UPI apps do not tell this website when money is taken.
+            So: <strong>1)</strong> Pay with scanner · <strong>2)</strong> Tap green
+            “I paid successfully” → admin <strong>Paid: Yes</strong> + WhatsApp to shop.<br><br>
+            Shop can also open the order and tap <strong>Mark as Paid</strong> after checking the bank app.
         </div>
 
         <ul class="items">

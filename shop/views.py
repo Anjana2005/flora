@@ -1488,9 +1488,10 @@ def order_pay(request, order_id):
             rz_error = str(e)
             secure = False
 
-    # Pure UPI QR only: scan/open → app opens with amount + note auto-filled
+    # Pure UPI QR: money goes via bank. Admin Paid needs step 2 (confirm) or Razorpay/admin.
     payment = build_order_payment_qr(order)
     open_upi_url = reverse('shop:order_launch_payment', args=[order.id]) + '?method=scan'
+    confirm_url = reverse('shop:order_confirm_paid', args=[order.id])
 
     context = {
         'order': order,
@@ -1505,6 +1506,7 @@ def order_pay(request, order_id):
         'upi_link': payment['upi_link'],
         'qr_url': payment['qr_url'],
         'open_upi_url': open_upi_url,
+        'confirm_url': confirm_url,
         'items': order.items.select_related('product').all(),
         'secure_payments': secure,
         'rz_error': rz_error,
@@ -1650,8 +1652,8 @@ def order_razorpay_webhook(request):
 def order_launch_payment(request, order_id):
     """
     Open UPI app for this order (amount + note code).
-    Does NOT mark Paid — bank/UPI apps never notify this free site.
-    Paid only via verified Razorpay or staff "Mark as Paid" in admin.
+    Does NOT mark Paid by itself — bank never calls this website.
+    After paying in the app, customer must use "I paid" (order_confirm_paid).
     """
     from .payments import (
         build_payment_confirmation_whatsapp_url,
@@ -1661,19 +1663,15 @@ def order_launch_payment(request, order_id):
         get_upi_id,
     )
     from django.http import HttpResponseRedirect
+    from django.urls import reverse
 
     order = get_object_or_404(Order, id=order_id)
     method = (request.GET.get('method') or 'scan').lower()
     expected_note = build_order_note_code(order.id)
 
-    # WhatsApp notify only after already paid (never mark paid here)
     if method in ('wa', 'whatsapp'):
         if order.paid:
             return HttpResponseRedirect(build_payment_confirmation_whatsapp_url(order, request))
-        messages.info(
-            request,
-            'Pay first with UPI. Admin shows Paid only after money is confirmed.',
-        )
         return redirect('shop:order_pay', order_id=order.id)
 
     if order.paid:
@@ -1683,8 +1681,11 @@ def order_launch_payment(request, order_id):
     note_code = payment.get('payment_note') or expected_note
     upi_link = payment.get('upi_link') or ''
     amount_str = payment.get('amount_str') or ''
+    # Link back so after UPI they can mark admin Paid
+    return_confirm = request.build_absolute_uri(
+        reverse('shop:order_confirm_paid', args=[order.id])
+    )
 
-    # Open UPI only — leave paid=False until real money / admin
     if upi_link:
         return upi_app_response(
             upi_link,
@@ -1692,13 +1693,44 @@ def order_launch_payment(request, order_id):
             amount_str=amount_str,
             shop_upi=get_upi_id(),
             already_paid=False,
+            confirm_url=return_confirm,
         )
     return redirect('shop:order_pay', order_id=order.id)
 
 
 def order_confirm_paid(request, order_id):
-    """Redirect to payment page — confirmation uses checkout UPI textarea only."""
-    return redirect('shop:order_pay', order_id=order_id)
+    """
+    Customer finished UPI payment → set admin Paid: Yes + stock + WhatsApp.
+    Required because pure UPI scanner cannot tell the website money succeeded.
+    """
+    from .payments import build_order_note_code, build_payment_confirmation_whatsapp_url
+    from django.http import HttpResponseRedirect
+
+    order = get_object_or_404(Order, id=order_id)
+    note = build_order_note_code(order.id)
+
+    if not order.paid:
+        order.mark_as_paid(
+            payment_ref=note,
+            payment_method='upi_scanner',
+        )
+        order.refresh_from_db()
+    if not order.paid:
+        from django.utils import timezone as dj_tz
+        Order.objects.filter(pk=order.pk).update(
+            paid=True,
+            paid_at=dj_tz.now(),
+            payment_ref=note[:64],
+            payment_method='upi_scanner',
+        )
+        order.refresh_from_db()
+
+    messages.success(
+        request,
+        f'Payment recorded for {note}. Admin shows Paid: Yes ✓',
+    )
+    # Notify shop on WhatsApp
+    return HttpResponseRedirect(build_payment_confirmation_whatsapp_url(order, request))
 
 
 def order_paid_success(request, order_id):

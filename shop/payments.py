@@ -98,10 +98,17 @@ def build_order_note_code(order_id):
     return f'FLORA{order_id}'
 
 
-def upi_app_response(upi_link, note_code='', amount_str='', shop_upi='', already_paid=True):
+def upi_app_response(
+    upi_link,
+    note_code='',
+    amount_str='',
+    shop_upi='',
+    already_paid=True,
+    confirm_url='',
+):
     """
     Open UPI app with amount + note pre-filled (HTML bridge; no 302 to upi://).
-    Same link as the QR: tn= note comes automatically in GPay/PhonePe.
+    After money succeeds in the app, customer taps confirm_url → admin Paid: Yes.
     """
     from django.http import HttpResponse
     from django.utils.html import escape
@@ -114,11 +121,22 @@ def upi_app_response(upi_link, note_code='', amount_str='', shop_upi='', already
     safe_note = escape(note_code or '')
     safe_amt = escape(str(amount_str or ''))
     safe_shop = escape(shop_upi or get_upi_id())
+    safe_confirm = escape(confirm_url or '')
     paid_line = (
         'Already paid in admin'
         if already_paid
-        else 'Note + amount open automatically in UPI'
+        else 'Step 1: Pay in UPI app · Step 2: Update admin below'
     )
+    confirm_btn = ''
+    if confirm_url and not already_paid:
+        confirm_btn = (
+            f'<a class="btn confirm" href="{safe_confirm}">'
+            f'I paid successfully → show Paid in admin</a>'
+            f'<p style="margin-top:0.5rem;font-size:.85rem">'
+            f'After GPay/PhonePe shows <strong>Payment successful</strong>, '
+            f'tap the green button so the shop dashboard shows <strong>Paid: Yes</strong>.'
+            f'</p>'
+        )
     html = f"""<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="utf-8">
@@ -127,9 +145,10 @@ def upi_app_response(upi_link, note_code='', amount_str='', shop_upi='', already
 <style>
   body{{font-family:system-ui,sans-serif;background:#fff7f9;color:#5A3F4A;margin:0;padding:2rem 1rem;text-align:center}}
   .card{{max-width:400px;margin:0 auto;background:#fff;border-radius:20px;padding:1.5rem;box-shadow:0 12px 28px rgba(232,122,150,.15)}}
-  .ok{{display:inline-block;background:#e3f2fd;color:#0d47a1;font-weight:800;padding:.4rem .8rem;border-radius:999px;margin:.5rem 0}}
+  .ok{{display:inline-block;background:#e3f2fd;color:#0d47a1;font-weight:800;padding:.4rem .8rem;border-radius:999px;margin:.5rem 0;font-size:.85rem}}
   .amt{{font-size:1.75rem;font-weight:800;color:#E87A96}}
   a.btn{{display:block;margin:.7rem 0 0;padding:.9rem 1rem;border-radius:12px;background:#E87A96;color:#fff;font-weight:800;text-decoration:none}}
+  a.btn.confirm{{background:#25D366;margin-top:1.1rem}}
   p{{font-size:.92rem;line-height:1.45;color:#666}}
   code{{font-weight:800;color:#5A3F4A}}
 </style>
@@ -142,7 +161,7 @@ def upi_app_response(upi_link, note_code='', amount_str='', shop_upi='', already
   Note will show as: <code>{safe_note}</code></p>
   <a class="btn" id="upi-btn" href="{safe_upi}">Open UPI (note auto-filled)</a>
   <a class="btn" href="{safe_intent}" style="background:#5A3F4A">Open on Android</a>
-  <p style="margin-top:1rem;font-size:.85rem">In the app, check Remarks / Message shows <strong>{safe_note}</strong>, then pay.</p>
+  {confirm_btn}
 </div>
 <script>
 (function(){{
