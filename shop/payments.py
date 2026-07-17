@@ -53,20 +53,31 @@ def _amount_str(amount):
     return f"{float(amount):.2f}"
 
 
-def build_upi_link(amount, order_ref, note=None):
+def build_payment_ref(order_id, extra=''):
+    """Unique transaction reference for one order payment QR."""
+    base = f"FLORA{order_id}"
+    extra = ''.join(ch for ch in str(extra) if ch.isalnum())[:12]
+    if extra:
+        return f"{base}{extra}"[:35]
+    return base[:35]
+
+
+def build_upi_link(amount, order_ref, note=None, tr=None):
     """
-    Personal UPI pay intent (minimal params).
-    Do not force a wrong `pn` — that breaks many apps while manual pay still works.
+    Unique UPI pay intent for a specific order.
+    Includes amount + unique tr (transaction ref) so each order has its own QR/link.
     """
     pa = get_upi_id()
     am = _amount_str(amount)
     tn = ''.join(ch for ch in (note or str(order_ref)) if ch.isalnum())[:40] or 'FloraOrder'
+    tr_val = ''.join(ch for ch in str(tr or order_ref) if ch.isalnum())[:35] or tn
 
     parts = [
         f'pa={pa}',
         f'am={am}',
         'cu=INR',
         f'tn={tn}',
+        f'tr={tr_val}',
     ]
     pn = get_upi_name()
     if pn:
@@ -76,10 +87,67 @@ def build_upi_link(amount, order_ref, note=None):
 
 
 def build_upi_qr_url(upi_link, size=280):
-    return (
-        'https://api.qrserver.com/v1/create-qr-code/'
-        f'?size={size}x{size}&margin=10&data={quote(upi_link, safe="")}'
+    """
+    Prefer a local unique QR image (data URI) so every payment has its own scanner.
+    Fallback to external API if qrcode is unavailable.
+    """
+    try:
+        return build_upi_qr_data_uri(upi_link, size=size)
+    except Exception:
+        return (
+            'https://api.qrserver.com/v1/create-qr-code/'
+            f'?size={size}x{size}&margin=10&data={quote(upi_link, safe="")}'
+        )
+
+
+def build_upi_qr_data_uri(upi_link, size=280):
+    """Generate a PNG QR as data URI — unique for this upi_link payload."""
+    import base64
+    import io
+
+    import qrcode
+    from qrcode.constants import ERROR_CORRECT_M
+
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=ERROR_CORRECT_M,
+        box_size=8,
+        border=2,
     )
+    qr.add_data(upi_link)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color='black', back_color='white')
+    # Resize roughly to requested size
+    try:
+        img = img.resize((size, size))
+    except Exception:
+        pass
+    buf = io.BytesIO()
+    img.save(buf, format='PNG')
+    b64 = base64.b64encode(buf.getvalue()).decode('ascii')
+    return f'data:image/png;base64,{b64}'
+
+
+def build_order_payment_qr(order, size=280):
+    """
+    Build UPI link + unique QR for one order (amount + order id in payload).
+    Returns dict: upi_link, qr_url, order_ref, amount_str, tr
+    """
+    order_ref = f'FLORA{order.id}'
+    amount = order.get_total_cost()
+    # Make tr unique per order (and slightly unique if recreated)
+    created = getattr(order, 'created_at', None)
+    stamp = created.strftime('%H%M%S') if created else ''
+    tr = build_payment_ref(order.id, stamp)
+    upi_link = build_upi_link(amount, order_ref, note=order_ref, tr=tr)
+    return {
+        'order_ref': order_ref,
+        'amount_str': _amount_str(amount),
+        'tr': tr,
+        'upi_link': upi_link,
+        'qr_url': build_upi_qr_url(upi_link, size=size),
+        'shop_upi_id': get_upi_id(),
+    }
 
 
 def build_android_intent_link(amount, order_ref):

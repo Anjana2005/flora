@@ -1464,13 +1464,11 @@ def checkout(request):
 
 def order_pay(request, order_id):
     """
-    Payment page: pay to shop UPI.
-    Customer UPI was already collected in checkout textarea (anti-spam).
-    Paying via Pay buttons confirms with that saved UPI ID.
+    Payment page: unique QR/scanner for this order amount + ref.
+    Customer UPI collected at checkout (anti-spam).
     """
     from .payments import (
-        build_upi_link,
-        build_upi_qr_url,
+        build_order_payment_qr,
         build_android_intent_link,
         build_gpay_link,
         build_phonepe_link,
@@ -1481,19 +1479,22 @@ def order_pay(request, order_id):
     from django.urls import reverse
 
     order = get_object_or_404(Order, id=order_id)
-    order_ref = f"FLORA{order.id}"
-    total = order.get_total_cost()
-    upi_link = build_upi_link(total, order_ref)
 
     if order.paid:
         return redirect('shop:order_paid_success', order_id=order.id)
 
+    payment = build_order_payment_qr(order)
+    order_ref = payment['order_ref']
+    total = order.get_total_cost()
+    upi_link = payment['upi_link']
+
     context = {
         'order': order,
         'order_ref': order_ref,
+        'payment_tr': payment['tr'],
         'total': total,
-        'amount_str': _amount_str(total),
-        'shop_upi_id': get_upi_id(),
+        'amount_str': payment['amount_str'],
+        'shop_upi_id': payment['shop_upi_id'],
         'upi_id': get_upi_id(),
         'payer_upi_id': order.payer_upi_id,
         'upi_link': upi_link,
@@ -1501,7 +1502,8 @@ def order_pay(request, order_id):
         'gpay_link': build_gpay_link(total, order_ref),
         'phonepe_link': build_phonepe_link(total, order_ref),
         'paytm_link': build_paytm_link(total, order_ref),
-        'qr_url': build_upi_qr_url(upi_link),
+        # Unique QR for this order only
+        'qr_url': payment['qr_url'],
         'items': order.items.select_related('product').all(),
         'pay_upi_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=upi',
         'pay_android_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=android',

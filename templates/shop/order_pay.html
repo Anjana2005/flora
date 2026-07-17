@@ -107,9 +107,13 @@
         </div>
 
         <div class="qr-box">
-            <img src="{{ qr_url }}" alt="Pay QR">
+            <img src="{{ qr_url }}" alt="Payment QR for {{ order_ref }}">
         </div>
-        <p class="hint">Pay ₹{{ amount_str }} to the shop UPI, then use a button below.</p>
+        <p class="hint">
+            <strong>Unique scanner for this order only</strong><br>
+            Order <strong>{{ order_ref }}</strong> · Ref <strong>{{ payment_tr }}</strong> · ₹{{ amount_str }}<br>
+            Do not reuse this QR for another order.
+        </p>
 
         <a class="pay-btn" href="{{ pay_upi_url }}">Pay with UPI</a>
         <a class="pay-btn" href="{{ pay_android_url }}">Pay (Android UPI)</a>
