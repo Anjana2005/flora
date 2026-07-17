@@ -100,22 +100,24 @@ def build_order_note_code(order_id):
 
 def upi_app_response(upi_link, note_code='', amount_str='', shop_upi='', already_paid=True):
     """
-    Open UPI app without Django HttpResponseRedirect (which blocks upi:// → 400 Bad Request).
-    Returns a small HTML page that jumps to the UPI deep link.
+    Open UPI app with amount + note pre-filled (HTML bridge; no 302 to upi://).
+    Same link as the QR: tn= note comes automatically in GPay/PhonePe.
     """
     from django.http import HttpResponse
     from django.utils.html import escape
 
+    intent = build_android_upi_intent(upi_link)
     safe_upi = escape(upi_link or '')
-    # JSON string for JS (handles quotes)
+    safe_intent = escape(intent or upi_link or '')
     js_upi = json.dumps(upi_link or '')
+    js_intent = json.dumps(intent or upi_link or '')
     safe_note = escape(note_code or '')
     safe_amt = escape(str(amount_str or ''))
     safe_shop = escape(shop_upi or get_upi_id())
     paid_line = (
-        'Admin: Paid Yes ✓'
+        'Already paid in admin'
         if already_paid
-        else 'Not paid yet — complete UPI transfer'
+        else 'Note + amount open automatically in UPI'
     )
     html = f"""<!DOCTYPE html>
 <html lang="en"><head>
@@ -125,7 +127,7 @@ def upi_app_response(upi_link, note_code='', amount_str='', shop_upi='', already
 <style>
   body{{font-family:system-ui,sans-serif;background:#fff7f9;color:#5A3F4A;margin:0;padding:2rem 1rem;text-align:center}}
   .card{{max-width:400px;margin:0 auto;background:#fff;border-radius:20px;padding:1.5rem;box-shadow:0 12px 28px rgba(232,122,150,.15)}}
-  .ok{{display:inline-block;background:#e8f5e9;color:#1b5e20;font-weight:800;padding:.4rem .8rem;border-radius:999px;margin:.5rem 0}}
+  .ok{{display:inline-block;background:#e3f2fd;color:#0d47a1;font-weight:800;padding:.4rem .8rem;border-radius:999px;margin:.5rem 0}}
   .amt{{font-size:1.75rem;font-weight:800;color:#E87A96}}
   a.btn{{display:block;margin:.7rem 0 0;padding:.9rem 1rem;border-radius:12px;background:#E87A96;color:#fff;font-weight:800;text-decoration:none}}
   p{{font-size:.92rem;line-height:1.45;color:#666}}
@@ -136,18 +138,24 @@ def upi_app_response(upi_link, note_code='', amount_str='', shop_upi='', already
   <h1 style="font-size:1.25rem;margin:0 0 .35rem">Opening UPI…</h1>
   <div class="ok">{paid_line}</div>
   <div class="amt">₹{safe_amt}</div>
-  <p>Pay to <code>{safe_shop}</code><br>Note: <code>{safe_note}</code></p>
-  <a class="btn" id="upi-btn" href="{safe_upi}">Open UPI app now</a>
-  <p style="margin-top:1rem;font-size:.85rem">If the app did not open, tap the button above.</p>
+  <p>Pay to <code>{safe_shop}</code><br>
+  Note will show as: <code>{safe_note}</code></p>
+  <a class="btn" id="upi-btn" href="{safe_upi}">Open UPI (note auto-filled)</a>
+  <a class="btn" href="{safe_intent}" style="background:#5A3F4A">Open on Android</a>
+  <p style="margin-top:1rem;font-size:.85rem">In the app, check Remarks / Message shows <strong>{safe_note}</strong>, then pay.</p>
 </div>
 <script>
 (function(){{
   var u = {js_upi};
-  if (u) {{
-    try {{ window.location.href = u; }} catch (e) {{}}
+  var intent = {js_intent};
+  var ua = navigator.userAgent || '';
+  var isAndroid = /Android/i.test(ua);
+  var target = (isAndroid && intent) ? intent : u;
+  if (target) {{
+    try {{ window.location.href = target; }} catch (e) {{}}
     setTimeout(function(){{
-      try {{ window.location.replace(u); }} catch (e) {{}}
-    }}, 400);
+      try {{ window.location.href = u; }} catch (e) {{}}
+    }}, 600);
   }}
 }})();
 </script>
@@ -157,42 +165,39 @@ def upi_app_response(upi_link, note_code='', amount_str='', shop_upi='', already
 
 def build_upi_link(amount, order_ref, note=None, tr=None):
     """
-    Personal-UPI friendly pay intent.
+    Pure UPI intent so GPay/PhonePe auto-fill:
+      - Payee (pa)
+      - Amount (am)
+      - Note / remarks (tn)  ← order code e.g. FLORA30
 
-    Many GPay/PhonePe failures ("money has not been debited") come from extra
-    merchant fields (tr / wrong pn) on personal VPAs like name@axl.
-    Keep link minimal: pa + am + cu + short tn (order note).
+    QR and "Open UPI" both use this exact string — never a website URL.
     """
     pa = (get_upi_id() or '').strip().lower()
     am = _amount_str(amount)
-    # Short remarks only (order code) — no spaces for best app compatibility
-    tn = sanitize_upi_note(note or order_ref, max_len=25).replace(' ', '')
+    # Order note that must appear in the app Remarks / Message field
+    tn = sanitize_upi_note(note or order_ref, max_len=30).replace(' ', '')
     if not tn:
-        tn = 'Flora'
+        tn = 'FloraOrder'
 
-    # Minimal query — do NOT send tr/pn for personal UPI (breaks many banks)
-    parts = [
-        f'pa={pa}',
-        f'am={am}',
-        'cu=INR',
-        f'tn={tn}',
-    ]
-    # Optional merchant display name only if explicitly configured
-    pn = get_upi_name()
-    if pn:
-        # Keep alphanumeric only; wrong name is worse than no name
-        pn_clean = sanitize_upi_note(pn, max_len=30).replace(' ', '')
-        if pn_clean:
-            parts.insert(1, f'pn={pn_clean}')
+    # Standard NPCI order: pa, am, cu, tn — note is tn
+    # Do not use website URLs, tr, or wrong pn (breaks personal UPI).
+    return f'upi://pay?pa={pa}&am={am}&cu=INR&tn={tn}'
 
-    return 'upi://pay?' + '&'.join(parts)
+
+def build_android_upi_intent(upi_link):
+    """Android intent so Open UPI reliably hands off to GPay/PhonePe with same note."""
+    if not upi_link or not upi_link.startswith('upi://pay?'):
+        return upi_link or ''
+    query = upi_link.split('?', 1)[1]
+    return (
+        f'intent://pay?{query}'
+        '#Intent;scheme=upi;action=android.intent.action.VIEW;'
+        'category=android.intent.category.BROWSABLE;end'
+    )
 
 
 def build_upi_qr_url(upi_link, size=280):
-    """
-    Prefer a local unique QR image (data URI) so every payment has its own scanner.
-    Fallback to external API if qrcode is unavailable.
-    """
+    """QR image whose payload is the pure upi:// string (note inside)."""
     try:
         return build_upi_qr_data_uri(upi_link, size=size)
     except Exception:
@@ -203,7 +208,7 @@ def build_upi_qr_url(upi_link, size=280):
 
 
 def build_upi_qr_data_uri(upi_link, size=280):
-    """Generate a PNG QR as data URI — unique for this upi_link payload."""
+    """Generate a PNG QR as data URI from pure upi:// payload."""
     import base64
     import io
 
@@ -216,6 +221,7 @@ def build_upi_qr_data_uri(upi_link, size=280):
         box_size=8,
         border=2,
     )
+    # Exact UPI string — scan opens app with amount + note pre-filled
     qr.add_data(upi_link)
     qr.make(fit=True)
     img = qr.make_image(fill_color='black', back_color='white')
@@ -231,11 +237,11 @@ def build_upi_qr_data_uri(upi_link, size=280):
 
 def build_order_payment_qr(order, size=280, scan_page_url=None, slot=None):
     """
-    Build UPI link + QR for one order.
+    Always build a pure UPI QR (not a website link).
 
-    - upi_link always includes note code (tn=FLORA#) for GPay/PhonePe remarks
-    - If scan_page_url is set, QR hits the site first so admin can mark Paid: Yes
-      for that order code, then redirects to UPI with the same note
+    Scanning in GPay/PhonePe auto-fills amount + note (tn=FLORA#).
+    Opening UPI uses the same upi_link so note comes automatically.
+    scan_page_url is ignored for the QR image (kept only for API compat).
     """
     order_ref = build_order_note_code(order.id)
     payment_note = order_ref
@@ -243,15 +249,10 @@ def build_order_payment_qr(order, size=280, scan_page_url=None, slot=None):
     if slot is None:
         slot, _ = current_qr_slot()
     tr = build_payment_ref(order.id, f'S{slot}')
-    upi_link = build_upi_link(amount, order_ref, note=payment_note, tr=tr)
 
-    # Prefer pure UPI in QR so GPay pays without hitting the website
-    # (site cannot know bank success; admin must not auto-mark Paid from a link)
-    if scan_page_url:
-        sep = '&' if '?' in scan_page_url else '?'
-        qr_payload = f'{scan_page_url}{sep}note={quote(payment_note, safe="")}&slot={slot}'
-    else:
-        qr_payload = upi_link
+    # Pure UPI only — note auto-fills in payment app
+    upi_link = build_upi_link(amount, order_ref, note=payment_note)
+    qr_payload = upi_link
 
     return {
         'order_ref': order_ref,
@@ -262,8 +263,9 @@ def build_order_payment_qr(order, size=280, scan_page_url=None, slot=None):
         'seconds_left': seconds_until_qr_refresh(),
         'rotate_seconds': QR_ROTATE_SECONDS,
         'upi_link': upi_link,
+        'android_intent': build_android_upi_intent(upi_link),
         'qr_url': build_upi_qr_url(qr_payload, size=size),
-        'scan_page_url': scan_page_url or '',
+        'scan_page_url': '',
         'shop_upi_id': get_upi_id(),
     }
 

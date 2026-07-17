@@ -1488,11 +1488,9 @@ def order_pay(request, order_id):
             rz_error = str(e)
             secure = False
 
-    # Pure UPI QR (amount + note) — does not hit site, does not mark paid
-    payment = build_order_payment_qr(order, scan_page_url=None)
-    open_upi_url = request.build_absolute_uri(
-        reverse('shop:order_launch_payment', args=[order.id]) + '?method=scan'
-    )
+    # Pure UPI QR only: scan/open → app opens with amount + note auto-filled
+    payment = build_order_payment_qr(order)
+    open_upi_url = reverse('shop:order_launch_payment', args=[order.id]) + '?method=scan'
 
     context = {
         'order': order,
