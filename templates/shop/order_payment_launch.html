@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Opening payment - {{ order_ref }}{% endblock %}
+{% block title %}Sending order to shop - {{ order_ref }}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -36,9 +36,8 @@
         text-decoration: none;
         font-weight: 700;
         color: #fff;
-        background: linear-gradient(135deg, #F4A7B9, #E87A96);
+        background: linear-gradient(135deg, #25D366, #128C7E);
     }
-    .links a.wa { background: linear-gradient(135deg, #25D366, #128C7E); }
 </style>
 {% endblock %}
 
@@ -46,19 +45,18 @@
 <div class="launch-wrap">
     <div class="launch-card">
         <h1>Order {{ order_ref }}</h1>
-        <p class="status">✓ Marked Paid · Stock updated</p>
+        <p class="status">✓ Paid · Stock updated</p>
         <p>Amount: <strong>₹{{ amount_str }}</strong></p>
         {% if payer_upi_id %}
-        <p>Paid from UPI: <strong>{{ payer_upi_id }}</strong></p>
+        <p>Customer UPI: <strong>{{ payer_upi_id }}</strong></p>
         {% endif %}
-        <p class="hint">
-            Opening your UPI app… then WhatsApp with product &amp; order details.
-            Complete the payment PIN, then tap <strong>Send</strong> in WhatsApp.
+        <p class="hint" id="status-text">
+            Opening WhatsApp to the shop with full order details…
+            Tap <strong>Send</strong> in WhatsApp.
         </p>
         <div class="links">
-            <a id="pay-link" href="{{ pay_target }}">Open UPI payment</a>
-            <a id="wa-link" class="wa" href="{{ whatsapp_url }}" target="_blank" rel="noopener">Open WhatsApp order</a>
-            <a href="{{ success_url }}">Continue</a>
+            <a id="wa-link" href="{{ whatsapp_url }}">Open shop WhatsApp now</a>
+            <a href="{{ success_url }}" style="background:linear-gradient(135deg,#F4A7B9,#E87A96);">Back to confirmation page</a>
         </div>
     </div>
 </div>
@@ -67,26 +65,23 @@
 (function () {
     var payUrl = "{{ pay_target|escapejs }}";
     var waUrl = "{{ whatsapp_url|escapejs }}";
-    var successUrl = "{{ success_url|escapejs }}";
+    var skipUpi = {% if skip_upi %}true{% else %}false{% endif %};
 
-    // 1) Open UPI app immediately
-    try {
-        window.location.href = payUrl;
-    } catch (e) {}
+    function goWhatsApp() {
+        // Full page navigate to WhatsApp (shop number with order message)
+        window.location.href = waUrl;
+    }
 
-    // 2) After a short delay open WhatsApp with full order (paid + products)
-    setTimeout(function () {
+    if (!skipUpi && payUrl) {
+        // Optional: try open UPI first (for app buttons), then WhatsApp
         try {
-            window.open(waUrl, '_blank');
-        } catch (e) {
-            window.location.href = waUrl;
-        }
-    }, 1800);
-
-    // 3) Land on success page so admin state is clear if they come back
-    setTimeout(function () {
-        window.location.href = successUrl;
-    }, 4500);
+            window.location.href = payUrl;
+        } catch (e) {}
+        setTimeout(goWhatsApp, 2000);
+    } else {
+        // After QR scan payment — go straight to shop WhatsApp
+        setTimeout(goWhatsApp, 600);
+    }
 })();
 </script>
 {% endblock %}

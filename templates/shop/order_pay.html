@@ -45,6 +45,7 @@
     .pay-btn.gpay { background: linear-gradient(135deg, #4285F4, #34A853); }
     .pay-btn.phonepe { background: linear-gradient(135deg, #5f259f, #7b3fb8); }
     .pay-btn.paytm { background: linear-gradient(135deg, #00baf2, #002970); }
+    .pay-btn.wa { background: linear-gradient(135deg, #25D366, #128C7E); }
     .hint { color: #777; font-size: 0.9rem; line-height: 1.45; margin-top: 0.6rem; }
     .qr-box {
         display: inline-block;
@@ -52,8 +53,9 @@
         border-radius: 14px;
         padding: 0.75rem;
         border: 1px solid rgba(232,122,150,0.15);
+        cursor: pointer;
     }
-    .qr-box img { width: 200px; height: 200px; display: block; }
+    .qr-box img { width: 220px; height: 220px; display: block; }
     .copy-btn {
         border: 1px dashed #E87A96;
         background: transparent;
@@ -74,6 +76,16 @@
         font-size: 0.95rem;
         line-height: 1.45;
     }
+    .scan-note {
+        background: #e3f2fd;
+        color: #0d47a1;
+        border-radius: 12px;
+        padding: 0.9rem 1rem;
+        text-align: left;
+        font-size: 0.92rem;
+        line-height: 1.45;
+        margin: 0.75rem 0 1rem;
+    }
 </style>
 {% endblock %}
 
@@ -93,8 +105,7 @@
 
         {% if payer_upi_id %}
         <div class="payer-note">
-            Your UPI ID (from checkout): <strong>{{ payer_upi_id }}</strong><br>
-            Payment will be recorded against this UPI when you pay below.
+            Your UPI ID: <strong>{{ payer_upi_id }}</strong>
         </div>
         {% endif %}
 
@@ -106,20 +117,30 @@
             <div style="font-size:0.9rem;color:#666;">Note: <strong>{{ order_ref }}</strong></div>
         </div>
 
-        <div class="qr-box">
-            <img src="{{ qr_url }}" alt="Payment QR for {{ order_ref }}">
+        <div class="scan-note">
+            <strong>Scan this QR to pay</strong> for this order only
+            ({{ order_ref }} · ₹{{ amount_str }}).<br>
+            After you send money, come back to this page — it will open
+            <strong>WhatsApp to the shop</strong> with your order details. Tap <strong>Send</strong>.
         </div>
+
+        <a href="{{ pay_upi_url }}" id="qr-pay-link" title="Pay then notify shop">
+            <div class="qr-box" id="qr-box">
+                <img src="{{ qr_url }}" alt="Payment QR for {{ order_ref }}">
+            </div>
+        </a>
         <p class="hint">
-            <strong>Unique scanner for this order only</strong><br>
-            Order <strong>{{ order_ref }}</strong> · Ref <strong>{{ payment_tr }}</strong> · ₹{{ amount_str }}<br>
-            Do not reuse this QR for another order.
+            Unique scanner · Ref <strong>{{ payment_tr }}</strong><br>
+            After paying with the scanner, return here — WhatsApp opens automatically.
         </p>
 
-        <a class="pay-btn" href="{{ pay_upi_url }}">Pay with UPI</a>
-        <a class="pay-btn" href="{{ pay_android_url }}">Pay (Android UPI)</a>
-        <a class="pay-btn gpay" href="{{ pay_gpay_url }}">Google Pay</a>
-        <a class="pay-btn phonepe" href="{{ pay_phonepe_url }}">PhonePe</a>
-        <a class="pay-btn paytm" href="{{ pay_paytm_url }}">Paytm</a>
+        <a class="pay-btn" href="{{ pay_upi_url }}">Pay with UPI → then WhatsApp shop</a>
+        <a class="pay-btn gpay" href="{{ pay_gpay_url }}">Google Pay → WhatsApp shop</a>
+        <a class="pay-btn phonepe" href="{{ pay_phonepe_url }}">PhonePe → WhatsApp shop</a>
+        <a class="pay-btn paytm" href="{{ pay_paytm_url }}">Paytm → WhatsApp shop</a>
+        <a class="pay-btn wa" href="{{ pay_upi_url|cut:'method=upi' }}method=after_scan" id="after-scan-link">
+            I paid with scanner — open WhatsApp to shop
+        </a>
 
         <ul class="items">
             {% for item in items %}
@@ -145,5 +166,32 @@ function copyId(id) {
         prompt('Copy:', text);
     }
 }
+
+// After paying via scanner (phone leaves page / app), when user returns → WhatsApp shop
+(function () {
+    var afterScanUrl = "{% url 'shop:order_launch_payment' order.id %}?method=after_scan";
+    var hiddenAt = null;
+    var done = false;
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+            hiddenAt = Date.now();
+            return;
+        }
+        // User returned to this tab (e.g. after UPI payment from scanner)
+        if (!done && hiddenAt && (Date.now() - hiddenAt) > 5000) {
+            done = true;
+            window.location.href = afterScanUrl;
+        }
+    });
+
+    // Also if page was restored from bfcache after UPI
+    window.addEventListener('pageshow', function (e) {
+        if (e.persisted && !done) {
+            done = true;
+            window.location.href = afterScanUrl;
+        }
+    });
+})();
 </script>
 {% endblock %}
