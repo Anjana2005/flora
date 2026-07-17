@@ -171,12 +171,10 @@
 
         <ol class="steps">
             <li>Open <strong>GPay / PhonePe / Paytm</strong> on your phone</li>
-            <li>Tap <strong>Send money / Pay</strong> → <strong>UPI ID / Number</strong></li>
-            <li>Paste UPI: <strong>{{ upi_id }}</strong></li>
-            <li>Enter amount <strong>₹{{ total }}</strong></li>
-            <li>In remarks/note put <strong>{{ order_ref }}</strong></li>
-            <li>Pay with UPI PIN — you should see <strong>Payment successful</strong></li>
-            <li>Then tap WhatsApp below to notify the shop with screenshot if needed</li>
+            <li>Pay to UPI: <strong>{{ upi_id }}</strong></li>
+            <li>Amount <strong>₹{{ total }}</strong> · Note: <strong>{{ order_ref }}</strong></li>
+            <li>Complete payment with UPI PIN</li>
+            <li>Come back here and tap <strong>Payment successful — confirm &amp; update stock</strong></li>
         </ol>
 
         <div class="alert-warn">
@@ -206,20 +204,23 @@
 
         {% if order.paid %}
         <div class="alert-info" style="background:#e8f5e9;color:#1b5e20;">
-            <strong>Already paid.</strong> Admin panel shows Paid: Yes for this order.
-            Size stock was already reduced.
+            <strong>Payment recorded.</strong> Admin sees <strong>Paid: Yes</strong>.
+            Product size stock has been reduced.
         </div>
         <a class="pay-btn secondary" href="{% url 'shop:order_paid_success' order.id %}">View confirmation</a>
         {% else %}
-        <!-- After real UPI transfer, customer confirms → Paid=Yes + stock reduce -->
-        <form method="post" action="{% url 'shop:order_confirm_paid' order.id %}" style="margin:1rem 0;"
-              onsubmit="return confirm('Confirm only after your UPI payment is successful. This marks the order as Paid and reduces size stock.');">
+        <div class="alert-info" style="background:#fff3e0;color:#e65100;margin-top:1rem;">
+            <strong>Stock is NOT reduced until payment is confirmed.</strong>
+            After you finish UPI payment, tap the green button below.
+            That marks <strong>Paid: Yes</strong> in admin and decreases stock for this product/size only once.
+        </div>
+        <form method="post" action="{% url 'shop:order_confirm_paid' order.id %}" id="confirmPaidForm" style="margin:1rem 0;">
             {% csrf_token %}
-            <button type="submit" class="pay-btn" style="width:100%;border:none;cursor:pointer;">
-                I have paid on UPI — confirm payment
+            <button type="submit" class="pay-btn" style="width:100%;border:none;cursor:pointer;background:linear-gradient(135deg,#27AE60,#2ECC71);">
+                Payment successful — confirm &amp; update stock
             </button>
         </form>
-        <p class="hint">This sets <strong>Paid: Yes</strong> in the admin panel and reduces stock for the size you ordered.</p>
+        <p class="hint">UPI apps cannot notify the website automatically. Confirming here is what tells the shop you paid and reduces stock.</p>
         {% endif %}
 
         <a class="pay-btn wa" href="{{ whatsapp_url }}" target="_blank" rel="noopener">

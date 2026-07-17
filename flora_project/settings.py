@@ -204,7 +204,7 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Payments / order notifications
-UPI_ID = os.environ.get('UPI_ID', 'flora1101@axl')
+UPI_ID = os.environ.get('UPI_ID', '7591927789@fam')
 # Keep merchant name short — some UPI apps fail on long names
 UPI_MERCHANT_NAME = os.environ.get('UPI_MERCHANT_NAME', 'Flora')
 WHATSAPP_ORDER_NUMBER = os.environ.get('WHATSAPP_ORDER_NUMBER', '919074860867')

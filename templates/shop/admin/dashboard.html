@@ -143,26 +143,60 @@
                     <div class="stat-label">Total Products</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">{{ total_categories }}</div>
-                    <div class="stat-label">Categories</div>
+                    <div class="stat-number">{{ total_orders }}</div>
+                    <div class="stat-label">Total Orders</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #27AE60, #2ECC71);">
+                    <div class="stat-number">{{ paid_orders }}</div>
+                    <div class="stat-label">Paid orders</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #E67E22, #F39C12);">
+                    <div class="stat-number">{{ unpaid_orders }}</div>
+                    <div class="stat-label">Unpaid (awaiting UPI)</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-number">{{ active_offers }}</div>
-                    <div class="stat-label">Active Offers</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">{{ total_contacts }}</div>
-                    <div class="stat-label">Total Messages</div>
-                </div>
-                <div class="stat-card" style="background: linear-gradient(135deg, #FF6B9D, #FFA07A);">
                     <div class="stat-number">{{ unread_contacts }}</div>
                     <div class="stat-label">Unread Messages</div>
                 </div>
             </div>
 
+            <div style="background: var(--bg-light); padding: 1.5rem; border-radius: 10px; margin-bottom: 1.5rem;">
+                <h3 style="color: var(--text-dark); margin-bottom: 1rem;">Recent orders — paid or not</h3>
+                <table style="width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;">
+                    <thead>
+                        <tr style="text-align:left;border-bottom:2px solid #eee;">
+                            <th style="padding:0.6rem;">Order</th>
+                            <th style="padding:0.6rem;">Customer</th>
+                            <th style="padding:0.6rem;">Paid?</th>
+                            <th style="padding:0.6rem;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for order in recent_orders %}
+                        <tr style="border-bottom:1px solid #f1f1f1;">
+                            <td style="padding:0.6rem;">#FLORA{{ order.id }}</td>
+                            <td style="padding:0.6rem;">{{ order.first_name }} {{ order.last_name }}</td>
+                            <td style="padding:0.6rem;">
+                                {% if order.paid %}
+                                <span style="color:#27AE60;font-weight:700;">Yes ✓ (stock reduced)</span>
+                                {% else %}
+                                <span style="color:#d9534f;font-weight:700;">No (stock not reduced)</span>
+                                {% endif %}
+                            </td>
+                            <td style="padding:0.6rem;"><a href="{% url 'shop:admin_order_detail' id=order.id %}">View</a></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4" style="padding:0.8rem;">No orders yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <a href="{% url 'shop:admin_orders' %}" style="display:inline-block;margin-top:0.8rem;">All orders →</a>
+            </div>
+
             <div style="background: var(--bg-light); padding: 1.5rem; border-radius: 10px;">
                 <h3 style="color: var(--text-dark); margin-bottom: 1rem;">Quick Actions</h3>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <a href="{% url 'shop:admin_orders' %}" class="btn btn-primary" style="text-align: center;">Manage Orders</a>
                     <a href="{% url 'shop:admin_products' %}" class="btn btn-primary" style="text-align: center;">View Products</a>
                     <a href="{% url 'shop:admin_contacts' %}" class="btn btn-primary" style="text-align: center;">View Messages</a>
                 </div>

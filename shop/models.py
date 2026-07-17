@@ -77,15 +77,18 @@ class Order(models.Model):
 
     def mark_as_paid(self):
         """
-        Mark order paid and reduce stock once.
-        Reduces ProductSize.quantity for sized items, else Product.stock.
+        ONLY path that reduces stock. Call after confirmed UPI payment.
+        - Sets paid=Yes for admin
+        - Decreases ProductSize stock for ordered size (if any)
+        - Decreases Product.stock
+        - Never runs twice (idempotent)
         Returns True if newly marked paid, False if already paid.
         """
         from django.db import transaction
-        from django.db.models import F
 
         with transaction.atomic():
             order = Order.objects.select_for_update().get(pk=self.pk)
+            # Guard: never reduce stock without payment / never double-deduct
             if order.paid:
                 return False
 
@@ -109,7 +112,6 @@ class Order(models.Model):
                         size_row.available = new_qty > 0
                         size_row.save(update_fields=['quantity', 'available'])
 
-                # Always reduce overall product stock as well
                 product.stock = max(0, int(product.stock) - qty)
                 product.save(update_fields=['stock'])
 

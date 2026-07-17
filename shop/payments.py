@@ -6,7 +6,7 @@ from django.conf import settings
 
 def get_upi_id():
     # Keep VPA exactly as registered in the bank/UPI app (no spaces)
-    return (getattr(settings, 'UPI_ID', None) or 'flora1101@axl').strip()
+    return (getattr(settings, 'UPI_ID', None) or '7591927789@fam').strip()
 
 
 def get_upi_name():

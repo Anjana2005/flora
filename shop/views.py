@@ -384,7 +384,11 @@ def admin_dashboard(request):
     unread_contacts = Contact.objects.filter(read=False).count()
     total_offers = OfferSale.objects.count()
     active_offers = OfferSale.objects.filter(active=True).count()
-    
+    total_orders = Order.objects.count()
+    paid_orders = Order.objects.filter(paid=True).count()
+    unpaid_orders = Order.objects.filter(paid=False).count()
+    recent_orders = Order.objects.order_by('-created_at')[:8]
+
     context = {
         'total_products': total_products,
         'total_categories': total_categories,
@@ -392,6 +396,10 @@ def admin_dashboard(request):
         'unread_contacts': unread_contacts,
         'total_offers': total_offers,
         'active_offers': active_offers,
+        'total_orders': total_orders,
+        'paid_orders': paid_orders,
+        'unpaid_orders': unpaid_orders,
+        'recent_orders': recent_orders,
     }
     return render(request, 'shop/admin/dashboard.html', context)
 
