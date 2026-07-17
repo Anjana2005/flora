@@ -1654,12 +1654,14 @@ def order_launch_payment(request, order_id):
     Order-specific UPI scanner path:
     1) Confirm note code matches this order (FLORA#)
     2) Mark Paid: Yes in admin + stock
-    3) Open UPI to flora1101@axl with that note pre-filled
+    3) Open UPI to flora1101@axl with that note (HTML bridge — not 302 to upi://)
     """
     from .payments import (
         build_payment_confirmation_whatsapp_url,
         build_order_payment_qr,
         build_order_note_code,
+        upi_app_response,
+        get_upi_id,
     )
     from django.http import HttpResponseRedirect
 
@@ -1679,6 +1681,7 @@ def order_launch_payment(request, order_id):
                 payment_ref=expected_note,
                 payment_method='upi_scanner',
             )
+            order.refresh_from_db()
         return HttpResponseRedirect(build_payment_confirmation_whatsapp_url(order, request))
 
     # Reject wrong note code if someone tampers with the URL
@@ -1692,13 +1695,17 @@ def order_launch_payment(request, order_id):
     payment = build_order_payment_qr(order)
     note_code = payment.get('payment_note') or expected_note
     upi_link = payment.get('upi_link') or ''
+    amount_str = payment.get('amount_str') or ''
 
     # Mark Paid: Yes for this order's scanner + note code
     if not order.paid:
-        order.mark_as_paid(
-            payment_ref=note_code,
-            payment_method='upi_scanner',
-        )
+        try:
+            order.mark_as_paid(
+                payment_ref=note_code,
+                payment_method='upi_scanner',
+            )
+        except Exception:
+            pass
         order.refresh_from_db()
     if not order.paid:
         from django.utils import timezone as dj_tz
@@ -1710,9 +1717,15 @@ def order_launch_payment(request, order_id):
         )
         order.refresh_from_db()
 
-    # Open UPI app to flora1101@axl with amount + note code
+    # Do NOT use HttpResponseRedirect(upi://…) — Django blocks it with 400 Bad Request
     if upi_link:
-        return HttpResponseRedirect(upi_link)
+        return upi_app_response(
+            upi_link,
+            note_code=note_code,
+            amount_str=amount_str,
+            shop_upi=get_upi_id(),
+            already_paid=bool(order.paid),
+        )
     return redirect('shop:order_paid_success', order_id=order.id)
 
 

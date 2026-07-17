@@ -1,4 +1,5 @@
 """UPI / WhatsApp helpers for Flora orders."""
+import json
 from urllib.parse import quote
 
 from django.conf import settings
@@ -95,6 +96,59 @@ def sanitize_upi_note(value, max_len=40):
 def build_order_note_code(order_id):
     """Default note code embedded in every scanner (shows in UPI payment remarks)."""
     return f'FLORA{order_id}'
+
+
+def upi_app_response(upi_link, note_code='', amount_str='', shop_upi='', already_paid=True):
+    """
+    Open UPI app without Django HttpResponseRedirect (which blocks upi:// → 400 Bad Request).
+    Returns a small HTML page that jumps to the UPI deep link.
+    """
+    from django.http import HttpResponse
+    from django.utils.html import escape
+
+    safe_upi = escape(upi_link or '')
+    # JSON string for JS (handles quotes)
+    js_upi = json.dumps(upi_link or '')
+    safe_note = escape(note_code or '')
+    safe_amt = escape(str(amount_str or ''))
+    safe_shop = escape(shop_upi or get_upi_id())
+    paid_line = 'Admin: Paid Yes ✓' if already_paid else 'Complete payment in UPI'
+    html = f"""<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open UPI · {safe_note}</title>
+<style>
+  body{{font-family:system-ui,sans-serif;background:#fff7f9;color:#5A3F4A;margin:0;padding:2rem 1rem;text-align:center}}
+  .card{{max-width:400px;margin:0 auto;background:#fff;border-radius:20px;padding:1.5rem;box-shadow:0 12px 28px rgba(232,122,150,.15)}}
+  .ok{{display:inline-block;background:#e8f5e9;color:#1b5e20;font-weight:800;padding:.4rem .8rem;border-radius:999px;margin:.5rem 0}}
+  .amt{{font-size:1.75rem;font-weight:800;color:#E87A96}}
+  a.btn{{display:block;margin:.7rem 0 0;padding:.9rem 1rem;border-radius:12px;background:#E87A96;color:#fff;font-weight:800;text-decoration:none}}
+  p{{font-size:.92rem;line-height:1.45;color:#666}}
+  code{{font-weight:800;color:#5A3F4A}}
+</style>
+</head><body>
+<div class="card">
+  <h1 style="font-size:1.25rem;margin:0 0 .35rem">Opening UPI…</h1>
+  <div class="ok">{paid_line}</div>
+  <div class="amt">₹{safe_amt}</div>
+  <p>Pay to <code>{safe_shop}</code><br>Note: <code>{safe_note}</code></p>
+  <a class="btn" id="upi-btn" href="{safe_upi}">Open UPI app now</a>
+  <p style="margin-top:1rem;font-size:.85rem">If the app did not open, tap the button above.</p>
+</div>
+<script>
+(function(){{
+  var u = {js_upi};
+  if (u) {{
+    try {{ window.location.href = u; }} catch (e) {{}}
+    setTimeout(function(){{
+      try {{ window.location.replace(u); }} catch (e) {{}}
+    }}, 400);
+  }}
+}})();
+</script>
+</body></html>"""
+    return HttpResponse(html)
 
 
 def build_upi_link(amount, order_ref, note=None, tr=None):
