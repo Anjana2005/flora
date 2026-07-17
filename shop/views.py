@@ -1,62 +1,22 @@
-# from urllib import request
-# from django.shortcuts import render, get_object_or_404, redirect
-# from django.core.paginator import Paginator
-# from django.contrib.auth import authenticate, login
-# from django.contrib.auth.models import User
-# from django.contrib.auth.decorators import login_required
-# from django.contrib import messages
-# from .models import Category, Product, Contact
-# from django.contrib.auth.decorators import login_required
-# from django.shortcuts import render
-# from django.contrib.auth.decorators import login_required
-# from django.shortcuts import render
-# from .models import Order
 import json
 import os
 from urllib import request as urllib_request
 from urllib.parse import urlencode
-from cart.cart import Cart
+from datetime import datetime
 
-from django.shortcuts import render, get_object_or_404, redirect
+from cart.cart import Cart
+from django.contrib import messages
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.contrib.auth import authenticate, login
-from django.contrib.auth.models import User
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from datetime import datetime
-from .models import Category, Product, Contact, Order, OrderItem, OfferSale
 
-# def cart_add(request, product_id):
-#     product = Product.objects.get(id=product_id)
-#     cart = request.session.get("cart", {})
-
-#     size = request.POST.get("size") or cart.get(str(product_id), {}).get("size")
-#     quantity = int(request.POST.get("quantity", 1))
-
-#     print("=== CART ADD DEBUG ===")
-#     print("Product:", product.name)
-#     print("Size from POST:", request.POST.get("size"))
-#     print("Quantity:", quantity)
-#     print("Cart before:", cart)
-
-#     cart[str(product_id)] = {
-#         "name": product.name,
-#         "price": float(product.get_display_price()),
-#         "quantity": quantity,
-#         "size": size,
-#     }
-
-#     request.session["cart"] = cart
-#     request.session.modified = True
-
-#     print("Cart after:", cart)
-#     print("======================")
-
-#     return redirect("cart:cart_detail")
+from .models import Category, Contact, OfferSale, Order, OrderItem, Product
 
 
 def resolve_google_place_id():
@@ -1585,17 +1545,6 @@ def order_pay(request, order_id):
     return render(request, 'shop/order_pay.html', context)
 
 
-def order_payment_qr_api(request, order_id):
-    """JSON status for payment page polling (paid flag only)."""
-    from django.http import JsonResponse
-    from django.urls import reverse
-
-    order = get_object_or_404(Order, id=order_id)
-    if order.paid:
-        return JsonResponse({'paid': True, 'redirect': reverse('shop:order_paid_success', args=[order.id])})
-    return JsonResponse({'paid': False})
-
-
 def order_razorpay_verify(request, order_id):
     """
     POST: verify Razorpay checkout signature, then mark Paid.
@@ -1765,41 +1714,6 @@ def order_launch_payment(request, order_id):
     return redirect('shop:order_pay', order_id=order.id)
 
 
-def order_confirm_paid(request, order_id):
-    """No public self-confirm — stay on payment page."""
-    return redirect('shop:order_pay', order_id=order_id)
-
-
-@login_required(login_url='shop:login')
-def order_mark_paid_api(request, order_id):
-    """
-    Staff-only: mark order paid (same as admin Mark as Paid).
-    Public users cannot mark paid without real payment / staff action.
-    """
-    from django.http import JsonResponse
-
-    if not request.user.is_staff:
-        return JsonResponse({'ok': False, 'error': 'Staff only', 'paid': False}, status=403)
-
-    order = get_object_or_404(Order, id=order_id)
-    already = bool(order.paid)
-    if not order.paid:
-        from .payments import build_order_note_code
-        note = build_order_note_code(order.id)
-        try:
-            order.mark_as_paid(payment_ref=note, payment_method='admin')
-        except Exception as e:
-            return JsonResponse({'ok': False, 'error': str(e), 'paid': False}, status=500)
-        order.refresh_from_db()
-
-    return JsonResponse({
-        'ok': True,
-        'paid': bool(order.paid),
-        'already': already,
-        'order_ref': f'FLORA{order.id}',
-    })
-
-
 def order_paid_success(request, order_id):
     """If somehow reached without WhatsApp, send them to shop WhatsApp immediately."""
     from .payments import build_payment_confirmation_whatsapp_url
@@ -1829,22 +1743,3 @@ def order_paid_success(request, order_id):
     )
 
 
-def cart_add_legacy(request, product_id):
-    # legacy unused helper kept from older code path
-    product = Product.objects.get(id=product_id)
-    cart = request.session.get("cart", {})
-
-    size = request.POST.get("size")
-    quantity = int(request.POST.get("quantity", 1))
-
-    cart[str(product_id)] = {
-        "name": product.name,
-        "price": float(product.get_display_price()),
-        "quantity": quantity,
-        "size": size,
-    }
-
-    request.session["cart"] = cart
-    request.session.modified = True
-
-    return redirect("cart:cart_detail")

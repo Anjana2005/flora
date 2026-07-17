@@ -119,6 +119,3 @@ def verify_webhook_signature(body: bytes, signature: str) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
-def fetch_payment(payment_id: str):
-    client = get_razorpay_client()
-    return client.payment.fetch(payment_id)

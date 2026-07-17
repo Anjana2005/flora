@@ -210,15 +210,10 @@
         <button type="button" class="btn-pay" id="rzp-button">
             <i class="fas fa-lock"></i> Pay ₹{{ amount_str }} securely
         </button>
-        <p class="hint" id="pay-status">
-            Razorpay marks <strong>Paid: Yes</strong> only after bank success.
-            Manual UPI below does <strong>not</strong> auto-mark paid.
-        </p>
+        <p class="hint" id="pay-status">Paid only after bank success.</p>
         {% else %}
         <div class="warn">
-            <strong>Pay with UPI scanner</strong> to <code>{{ shop_upi_id }}</code>.
-            Admin stays <strong>Paid: No</strong> until the shop checks the bank app and marks Paid,
-            or until Razorpay keys are added for automatic verification.
+            Pay with UPI below. Admin stays <strong>Paid: No</strong> until the shop confirms money.
             {% if rz_error %}<br><br><small>{{ rz_error }}</small>{% endif %}
         </div>
         {% endif %}

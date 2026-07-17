@@ -17,11 +17,8 @@ urlpatterns = [
     path('checkout/', views.checkout, name='checkout'),
     path('order/<int:order_id>/pay/', views.order_pay, name='order_pay'),
     path('order/<int:order_id>/pay-now/', views.order_launch_payment, name='order_launch_payment'),
-    path('order/<int:order_id>/payment-qr/', views.order_payment_qr_api, name='order_payment_qr_api'),
     path('order/<int:order_id>/razorpay/verify/', views.order_razorpay_verify, name='order_razorpay_verify'),
     path('order/razorpay/webhook/', views.order_razorpay_webhook, name='order_razorpay_webhook'),
-    path('order/<int:order_id>/confirm-paid/', views.order_confirm_paid, name='order_confirm_paid'),
-    path('order/<int:order_id>/mark-paid/', views.order_mark_paid_api, name='order_mark_paid_api'),
     path('order/<int:order_id>/paid/', views.order_paid_success, name='order_paid_success'),
 
     # Blog URLs

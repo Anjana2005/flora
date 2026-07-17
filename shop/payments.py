@@ -54,32 +54,6 @@ def _amount_str(amount):
     return f"{float(amount):.2f}"
 
 
-# How often the on-screen QR refreshes (new tr code). Longer = less flicker.
-QR_ROTATE_SECONDS = 600  # 10 minutes
-
-
-def current_qr_slot(now=None):
-    """Time bucket for rotating scanners."""
-    import time
-    t = int(now if now is not None else time.time())
-    return t // QR_ROTATE_SECONDS, t
-
-
-def seconds_until_qr_refresh(now=None):
-    import time
-    t = int(now if now is not None else time.time())
-    return QR_ROTATE_SECONDS - (t % QR_ROTATE_SECONDS)
-
-
-def build_payment_ref(order_id, extra=''):
-    """Unique transaction reference for one order payment QR."""
-    base = f"FLORA{order_id}"
-    extra = ''.join(ch for ch in str(extra) if ch.isalnum())[:12]
-    if extra:
-        return f"{base}{extra}"[:35]
-    return base[:35]
-
-
 def sanitize_upi_note(value, max_len=40):
     """UPI tn/tr: letters, digits, space, hyphen — apps often show this as Remarks."""
     raw = str(value or '').strip()
@@ -98,18 +72,8 @@ def build_order_note_code(order_id):
     return f'FLORA{order_id}'
 
 
-def upi_app_response(
-    upi_link,
-    note_code='',
-    amount_str='',
-    shop_upi='',
-    already_paid=True,
-    confirm_url='',
-):
-    """
-    Open UPI app with amount + order-note pre-filled.
-    No customer confirm button — admin Paid is set by order_launch_payment before this page.
-    """
+def upi_app_response(upi_link, note_code='', amount_str='', shop_upi='', already_paid=False):
+    """Open UPI app with amount + order-note pre-filled (no auto mark paid)."""
     from django.http import HttpResponse
     from django.utils.html import escape
 
@@ -249,64 +213,24 @@ def build_upi_qr_data_uri(upi_link, size=280):
 
 def build_order_payment_qr(order, size=280, scan_page_url=None, slot=None):
     """
-    Unique pure-UPI scanner per order (so money can debit).
-
-    QR payload is ALWAYS upi://pay?... never https://...
-    Different orders → different QR (FLORA# note + that order's amount).
-    scan_page_url is ignored for the image (kept for API compat only).
+    Unique pure-UPI QR per order (FLORA# note + amount).
+    Never encodes a website URL.
     """
     order_ref = build_order_note_code(order.id)
     payment_note = order_ref
     amount = order.get_total_cost()
-    if slot is None:
-        slot, _ = current_qr_slot()
-    tr = build_payment_ref(order.id, f'O{order.id}')
-
-    # Pure UPI only — required for bank debit in GPay/PhonePe
     upi_link = build_upi_link(amount, order_ref, note=payment_note)
-    qr_payload = upi_link
 
     return {
         'order_ref': order_ref,
         'payment_note': payment_note,
         'amount_str': _amount_str(amount),
-        'tr': tr,
-        'slot': slot,
-        'seconds_left': seconds_until_qr_refresh(),
-        'rotate_seconds': QR_ROTATE_SECONDS,
+        'tr': order_ref,
         'upi_link': upi_link,
         'android_intent': build_android_upi_intent(upi_link),
-        'qr_url': build_upi_qr_url(qr_payload, size=size),
-        'scan_page_url': '',
+        'qr_url': build_upi_qr_url(upi_link, size=size),
         'shop_upi_id': get_upi_id(),
     }
-
-
-def build_android_intent_link(amount, order_ref):
-    base = build_upi_link(amount, order_ref)
-    query = base.split('?', 1)[1]
-    return (
-        f'intent://pay?{query}'
-        '#Intent;scheme=upi;action=android.intent.action.VIEW;end'
-    )
-
-
-def build_gpay_link(amount, order_ref):
-    base = build_upi_link(amount, order_ref)
-    query = base.split('?', 1)[1]
-    return f'gpay://upi/pay?{query}'
-
-
-def build_phonepe_link(amount, order_ref):
-    base = build_upi_link(amount, order_ref)
-    query = base.split('?', 1)[1]
-    return f'phonepe://pay?{query}'
-
-
-def build_paytm_link(amount, order_ref):
-    base = build_upi_link(amount, order_ref)
-    query = base.split('?', 1)[1]
-    return f'paytmmp://pay?{query}'
 
 
 def build_order_message(order, request=None, paid=None):
