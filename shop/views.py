@@ -1527,13 +1527,15 @@ def order_confirm_paid(request, order_id):
     if order.paid:
         return redirect('shop:order_paid_success', order_id=order.id)
 
+    # Textarea may have newlines/spaces — normalize to one UPI string
     payer_upi = (request.POST.get('payer_upi_id') or '').strip().lower()
+    payer_upi = ''.join(payer_upi.split())
     payment_ref = (request.POST.get('payment_ref') or '').strip()
 
     if not is_valid_upi_id(payer_upi):
         messages.error(
             request,
-            'Enter your valid UPI ID (example: yourname@oksbi or 98xxxxxxxx@ybl) to confirm payment.',
+            'Please type your UPI ID in the box (example: yourname@oksbi or 98xxxxxxxx@ybl).',
         )
         return redirect('shop:order_pay', order_id=order.id)
 

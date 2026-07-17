@@ -26,39 +26,43 @@
         text-align: left;
         margin: 1rem 0;
     }
-    .box strong { color: #5A3F4A; word-break: break-all; }
     .confirm-box {
         background: #f7fff8;
-        border: 1px solid #c8e6c9;
-        border-radius: 14px;
-        padding: 1.1rem;
+        border: 2px solid #81c784;
+        border-radius: 16px;
+        padding: 1.25rem;
         text-align: left;
-        margin: 1.25rem 0;
+        margin: 1.5rem 0 1rem;
     }
     .confirm-box label {
         display: block;
-        font-weight: 700;
-        color: #5A3F4A;
-        margin: 0.6rem 0 0.35rem;
+        font-weight: 800;
+        color: #1b5e20;
+        margin-bottom: 0.5rem;
+        font-size: 1.05rem;
     }
-    .confirm-box input {
+    .confirm-box textarea {
         width: 100%;
-        padding: 0.75rem 0.9rem;
-        border-radius: 12px;
-        border: 1.5px solid rgba(232,122,150,0.25);
-        font-size: 1rem;
+        min-height: 100px;
+        padding: 0.9rem 1rem;
+        border-radius: 14px;
+        border: 2px solid #a5d6a7;
+        font-size: 1.1rem;
+        font-family: inherit;
         box-sizing: border-box;
+        resize: vertical;
+        line-height: 1.4;
     }
-    .confirm-box input:focus {
+    .confirm-box textarea:focus {
         outline: none;
-        border-color: #E87A96;
-        box-shadow: 0 0 0 3px rgba(232,122,150,0.15);
+        border-color: #27AE60;
+        box-shadow: 0 0 0 4px rgba(39,174,96,0.18);
     }
     .pay-btn {
         display: block;
         width: 100%;
         margin: 0.5rem 0;
-        padding: 0.9rem 1rem;
+        padding: 0.95rem 1rem;
         border-radius: 999px;
         border: none;
         font-weight: 700;
@@ -70,22 +74,37 @@
         box-sizing: border-box;
         font-family: inherit;
     }
-    .pay-btn.confirm { background: linear-gradient(135deg, #27AE60, #2ECC71); }
+    .pay-btn.confirm { background: linear-gradient(135deg, #27AE60, #2ECC71); font-size: 1.05rem; }
     .pay-btn.gpay { background: linear-gradient(135deg, #4285F4, #34A853); }
     .pay-btn.phonepe { background: linear-gradient(135deg, #5f259f, #7b3fb8); }
     .pay-btn.paytm { background: linear-gradient(135deg, #00baf2, #002970); }
     .hint { color: #777; font-size: 0.9rem; line-height: 1.45; margin-top: 0.6rem; }
     .step-title { font-weight: 800; color: #5A3F4A; margin: 1.2rem 0 0.5rem; text-align: left; }
-    .qr-box { display: inline-block; background: #fff; border-radius: 14px; padding: 0.75rem; border: 1px solid rgba(232,122,150,0.15); }
+    .qr-box {
+        display: inline-block;
+        background: #fff;
+        border-radius: 14px;
+        padding: 0.75rem;
+        border: 1px solid rgba(232,122,150,0.15);
+    }
     .qr-box img { width: 200px; height: 200px; display: block; }
     .copy-btn {
-        border: 1px dashed #E87A96; background: transparent; color: #E87A96;
-        border-radius: 999px; padding: 0.4rem 0.9rem; font-weight: 700; cursor: pointer;
+        border: 1px dashed #E87A96;
+        background: transparent;
+        color: #E87A96;
+        border-radius: 999px;
+        padding: 0.4rem 0.9rem;
+        font-weight: 700;
+        cursor: pointer;
     }
     .items { text-align: left; color: #5A3F4A; margin: 1rem 0; }
-    .alert-warn {
-        background: #fff8e1; color: #6d4c00; border-radius: 12px;
-        padding: 0.85rem 1rem; font-size: 0.92rem; text-align: left; line-height: 1.45;
+    .alert-msg {
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+        font-size: 0.95rem;
+        text-align: left;
+        line-height: 1.45;
+        margin-bottom: 0.75rem;
     }
 </style>
 {% endblock %}
@@ -98,70 +117,48 @@
 
         {% if messages %}
             {% for message in messages %}
-            <div class="alert-warn" style="{% if 'error' in message.tags %}background:#ffebee;color:#b71c1c;{% endif %}margin-bottom:0.75rem;">
+            <div class="alert-msg" style="{% if 'error' in message.tags %}background:#ffebee;color:#b71c1c;{% else %}background:#e8f5e9;color:#1b5e20;{% endif %}">
                 {{ message }}
             </div>
             {% endfor %}
         {% endif %}
 
-        <div class="alert-warn">
-            To stop spam “paid” confirmations, you must enter <strong>your UPI ID</strong>
-            (the one you paid from) after paying. Clicking Pay alone does <strong>not</strong> mark the order paid.
-        </div>
-
-        <p class="step-title">Step 1 — Pay this amount to shop UPI</p>
+        <p class="step-title">1. Pay to shop UPI</p>
         <div class="box">
-            <div style="font-size:0.9rem;color:#666;">Shop UPI ID (pay to)</div>
+            <div style="font-size:0.9rem;color:#666;">Shop UPI ID (pay to this)</div>
             <div style="font-size:1.2rem;font-weight:800;margin:0.35rem 0;" id="shop-upi">{{ shop_upi_id }}</div>
             <button type="button" class="copy-btn" onclick="copyId('shop-upi')">Copy shop UPI</button>
             <div style="margin-top:0.75rem;font-size:0.9rem;color:#666;">Amount: <strong>₹{{ amount_str }}</strong></div>
-            <div style="font-size:0.9rem;color:#666;">Note / remark: <strong>{{ order_ref }}</strong></div>
+            <div style="font-size:0.9rem;color:#666;">Note: <strong>{{ order_ref }}</strong></div>
         </div>
 
         <div class="qr-box">
             <img src="{{ qr_url }}" alt="Pay QR">
         </div>
-        <p class="hint">Scan QR or open an app below, then complete payment with UPI PIN.</p>
+        <p class="hint">Pay with GPay / PhonePe / Paytm, then confirm below.</p>
 
         <a class="pay-btn" href="{{ upi_link }}">Open UPI app</a>
-        <a class="pay-btn" href="{{ android_intent_link }}">Open UPI (Android)</a>
         <a class="pay-btn gpay" href="{{ gpay_link }}">Google Pay</a>
         <a class="pay-btn phonepe" href="{{ phonepe_link }}">PhonePe</a>
         <a class="pay-btn paytm" href="{{ paytm_link }}">Paytm</a>
 
-        <p class="step-title">Step 2 — Confirm with YOUR UPI ID</p>
+        <p class="step-title">2. Confirm you paid — enter your UPI ID</p>
         <form class="confirm-box" method="post" action="{% url 'shop:order_confirm_paid' order.id %}">
             {% csrf_token %}
-            <p style="margin:0 0 0.5rem;color:#2e7d32;font-size:0.95rem;">
-                After payment succeeds, enter the UPI ID you paid <em>from</em>
-                (example: <code>yourname@oksbi</code> or <code>98xxxxxxxx@ybl</code>).
-            </p>
-            <label for="payer_upi_id">Your UPI ID *</label>
-            <input
-                type="text"
+            <label for="payer_upi_id">Type the UPI ID you paid from</label>
+            <textarea
                 id="payer_upi_id"
                 name="payer_upi_id"
                 required
                 autocomplete="off"
-                placeholder="yourname@oksbi"
-                pattern="[A-Za-z0-9._\-]{2,64}@[A-Za-z0-9]{2,20}"
-                title="Enter a valid UPI ID like name@oksbi"
-            >
-            <label for="payment_ref">UTR / Transaction ID (optional)</label>
-            <input
-                type="text"
-                id="payment_ref"
-                name="payment_ref"
-                autocomplete="off"
-                placeholder="12-digit UTR if you have it"
-            >
-            <button type="submit" class="pay-btn confirm" style="margin-top:1rem;">
-                Confirm payment with my UPI ID
-            </button>
-            <p class="hint">
-                This marks the order <strong>Paid: Yes</strong>, reduces stock, and notifies the shop on WhatsApp.
-                Without your UPI ID, payment is not confirmed (no spam).
+                placeholder="Example:&#10;yourname@oksbi&#10;or&#10;98xxxxxxxx@ybl"
+            ></textarea>
+            <p class="hint" style="margin:0.5rem 0 0;">
+                This proves payment came from your UPI and stops spam fake confirmations.
             </p>
+            <button type="submit" class="pay-btn confirm" style="margin-top:1rem;">
+                Confirm I paid from this UPI ID
+            </button>
         </form>
 
         <ul class="items">
@@ -188,5 +185,12 @@ function copyId(id) {
         prompt('Copy:', text);
     }
 }
+// Clean textarea on submit (trim, single line for UPI)
+document.querySelector('.confirm-box').addEventListener('submit', function () {
+    var ta = document.getElementById('payer_upi_id');
+    if (ta) {
+        ta.value = (ta.value || '').replace(/\s+/g, '').toLowerCase();
+    }
+});
 </script>
 {% endblock %}
