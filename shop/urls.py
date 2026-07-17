@@ -16,6 +16,8 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('checkout/', views.checkout, name='checkout'),
     path('order/<int:order_id>/pay/', views.order_pay, name='order_pay'),
+    path('order/<int:order_id>/confirm-paid/', views.order_confirm_paid, name='order_confirm_paid'),
+    path('order/<int:order_id>/paid/', views.order_paid_success, name='order_paid_success'),
 
     # Blog URLs
     path('blog/create/', views.create_blog, name='create_blog'),

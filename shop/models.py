@@ -72,9 +72,53 @@ class Order(models.Model):
     def __str__(self):
         return f"Order #{self.id} - {self.first_name} {self.last_name}"
 
-    # ← ADD THIS METHOD
     def get_total_cost(self):
         return sum(item.price * item.quantity for item in self.items.all())
+
+    def mark_as_paid(self):
+        """
+        Mark order paid and reduce stock once.
+        Reduces ProductSize.quantity for sized items, else Product.stock.
+        Returns True if newly marked paid, False if already paid.
+        """
+        from django.db import transaction
+        from django.db.models import F
+
+        with transaction.atomic():
+            order = Order.objects.select_for_update().get(pk=self.pk)
+            if order.paid:
+                return False
+
+            for item in order.items.select_related('product').all():
+                if not item.product or not item.quantity:
+                    continue
+                qty = int(item.quantity)
+                size = (item.size or '').strip()
+
+                product = Product.objects.select_for_update().get(pk=item.product_id)
+
+                if size:
+                    size_row = (
+                        ProductSize.objects.select_for_update()
+                        .filter(product=product, size=size)
+                        .first()
+                    )
+                    if size_row:
+                        new_qty = max(0, int(size_row.quantity) - qty)
+                        size_row.quantity = new_qty
+                        size_row.available = new_qty > 0
+                        size_row.save(update_fields=['quantity', 'available'])
+
+                # Always reduce overall product stock as well
+                product.stock = max(0, int(product.stock) - qty)
+                product.save(update_fields=['stock'])
+
+            order.paid = True
+            order.save(update_fields=['paid'])
+            self.paid = True
+            return True
+
+
 class Category(models.Model):
     """Product categories for organizing the shop"""
     CATEGORY_TYPE_CHOICES = [

@@ -204,8 +204,26 @@
             {% endfor %}
         </ul>
 
+        {% if order.paid %}
+        <div class="alert-info" style="background:#e8f5e9;color:#1b5e20;">
+            <strong>Already paid.</strong> Admin panel shows Paid: Yes for this order.
+            Size stock was already reduced.
+        </div>
+        <a class="pay-btn secondary" href="{% url 'shop:order_paid_success' order.id %}">View confirmation</a>
+        {% else %}
+        <!-- After real UPI transfer, customer confirms → Paid=Yes + stock reduce -->
+        <form method="post" action="{% url 'shop:order_confirm_paid' order.id %}" style="margin:1rem 0;"
+              onsubmit="return confirm('Confirm only after your UPI payment is successful. This marks the order as Paid and reduces size stock.');">
+            {% csrf_token %}
+            <button type="submit" class="pay-btn" style="width:100%;border:none;cursor:pointer;">
+                I have paid on UPI — confirm payment
+            </button>
+        </form>
+        <p class="hint">This sets <strong>Paid: Yes</strong> in the admin panel and reduces stock for the size you ordered.</p>
+        {% endif %}
+
         <a class="pay-btn wa" href="{{ whatsapp_url }}" target="_blank" rel="noopener">
-            I paid — notify shop on WhatsApp
+            Notify shop on WhatsApp
         </a>
         <a class="pay-btn secondary" href="{% url 'shop:home' %}">Back to shop</a>
     </div>

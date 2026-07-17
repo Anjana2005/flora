@@ -5,18 +5,44 @@
 {% block content %}
 <div class="container">
     <div style="background:white;padding:1.5rem;border-radius:15px;box-shadow:0 5px 15px rgba(0,0,0,0.05);">
-        <h2>Order #{{ order.id }}</h2>
+        {% if messages %}
+            {% for message in messages %}
+            <div style="padding:0.8rem 1rem;border-radius:8px;margin-bottom:1rem;{% if 'error' in message.tags %}background:#F8D7DA;color:#721C24;{% else %}background:#D4EDDA;color:#155724;{% endif %}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+
+        <h2>Order #FLORA{{ order.id }}</h2>
         <p><strong>Customer:</strong> {{ order.first_name }} {{ order.last_name }} &mdash; {{ order.email }}</p>
         <p><strong>Phone:</strong> {{ order.phone }}</p>
         <p><strong>Address:</strong> {{ order.address }}, {{ order.city }}, {{ order.postal_code }}, {{ order.country }}</p>
         <p><strong>Placed:</strong> {{ order.created_at|date:"Y-m-d H:i" }}</p>
-        <p><strong>Paid:</strong> {% if order.paid %}<span style="color:green;">Yes</span>{% else %}<span style="color:#d9534f;">No</span>{% endif %}</p>
+        <p><strong>Paid:</strong>
+            {% if order.paid %}
+                <span style="color:green;font-weight:700;font-size:1.1rem;">Yes ✓</span>
+            {% else %}
+                <span style="color:#d9534f;font-weight:700;font-size:1.1rem;">No</span>
+            {% endif %}
+        </p>
+
+        {% if not order.paid %}
+        <form method="post" style="margin:1rem 0;">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="mark_paid">
+            <button type="submit" style="background:#27AE60;color:white;border:none;padding:0.7rem 1.4rem;border-radius:999px;font-weight:700;cursor:pointer;">
+                Mark as Paid (reduce size stock)
+            </button>
+        </form>
+        <p style="color:#777;font-size:0.9rem;">Use this if the customer paid on UPI but did not tap “I have paid” on the site.</p>
+        {% endif %}
 
         <h3 style="margin-top:1.5rem;">Items</h3>
         <table style="width:100%;border-collapse:collapse;margin-top:0.5rem;">
             <thead>
                 <tr style="text-align:left;border-bottom:2px solid #eee;">
                     <th>Product</th>
+                    <th>Size</th>
                     <th>Price</th>
                     <th>Quantity</th>
                     <th>Line Total</th>
@@ -26,6 +52,7 @@
                 {% for item in items %}
                 <tr style="border-bottom:1px solid #f9f9f9;">
                     <td>{% if item.product %}{{ item.product.name }}{% else %}Deleted product{% endif %}</td>
+                    <td><strong>{{ item.size|default:"—" }}</strong></td>
                     <td>₹{{ item.price|floatformat:2 }}</td>
                     <td>{{ item.quantity }}</td>
                     <td>₹{{ item.line_total|floatformat:2 }}</td>

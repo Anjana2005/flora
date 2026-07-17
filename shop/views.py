@@ -545,19 +545,28 @@ def admin_orders(request):
 
 @login_required(login_url='shop:login')
 def admin_order_detail(request, id):
-    """View single order details"""
+    """View single order details; staff can mark as paid (reduces size stock)."""
     if not request.user.is_staff:
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('shop:home')
 
-    from .models import Order
     order = get_object_or_404(Order, id=id)
+
+    if request.method == 'POST' and request.POST.get('action') == 'mark_paid':
+        if order.mark_as_paid():
+            messages.success(
+                request,
+                f'Order #FLORA{order.id} marked Paid. Size stock reduced for ordered items.',
+            )
+        else:
+            messages.info(request, 'Order was already marked as paid.')
+        return redirect('shop:admin_order_detail', id=order.id)
 
     # compute per-item line totals and order total
     from decimal import Decimal
     items = []
     total = Decimal('0.00')
-    for item in order.items.all():
+    for item in order.items.select_related('product').all():
         try:
             line_total = (item.price or Decimal('0.00')) * item.quantity
         except Exception:
@@ -1383,6 +1392,41 @@ def order_pay(request, order_id):
         'items': order.items.select_related('product').all(),
     }
     return render(request, 'shop/order_pay.html', context)
+
+
+def order_confirm_paid(request, order_id):
+    """
+    Customer taps "I have paid" after UPI transfer.
+    Marks order.paid = True in admin and reduces size stock once.
+    """
+    if request.method != 'POST':
+        return redirect('shop:order_pay', order_id=order_id)
+
+    order = get_object_or_404(Order, id=order_id)
+    if order.mark_as_paid():
+        messages.success(
+            request,
+            f'Thank you! Payment recorded for order FLORA{order.id}. '
+            f'Stock updated for the selected size(s).',
+        )
+    else:
+        messages.info(request, 'This order is already marked as paid.')
+
+    return redirect('shop:order_paid_success', order_id=order.id)
+
+
+def order_paid_success(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    return render(
+        request,
+        'shop/order_paid_success.html',
+        {
+            'order': order,
+            'order_ref': f'FLORA{order.id}',
+            'total': order.get_total_cost(),
+            'items': order.items.select_related('product').all(),
+        },
+    )
 
 
 def cart_add_legacy(request, product_id):

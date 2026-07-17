@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Payment recorded - Flora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ok-wrap { max-width: 520px; margin: 3rem auto; padding: 0 1rem; text-align: center; }
+    .ok-card {
+        background: #fff; border-radius: 24px; padding: 2rem 1.5rem;
+        border: 1px solid rgba(232,122,150,0.18);
+        box-shadow: 0 16px 36px rgba(232,122,150,0.12);
+    }
+    .ok-card h1 { font-family: 'Playfair Display', serif; color: #5A3F4A; }
+    .badge-paid {
+        display: inline-block; background: #e8f5e9; color: #1b5e20;
+        font-weight: 700; padding: 0.5rem 1rem; border-radius: 999px; margin: 1rem 0;
+    }
+    .ok-btn {
+        display: inline-block; margin-top: 1rem; padding: 0.85rem 1.5rem;
+        border-radius: 999px; background: linear-gradient(135deg, #F4A7B9, #E87A96);
+        color: #fff; text-decoration: none; font-weight: 700;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ok-wrap">
+    <div class="ok-card">
+        <h1>Payment recorded</h1>
+        <div class="badge-paid">Paid: Yes</div>
+        <p>Order <strong>{{ order_ref }}</strong></p>
+        <p>Amount: <strong>₹{{ total }}</strong></p>
+        <p style="color:#666;margin-top:1rem;">
+            Admin panel now shows this order as <strong>Paid: Yes</strong>.
+            Stock for the ordered size(s) has been reduced.
+        </p>
+        <ul style="text-align:left;margin:1rem auto;max-width:320px;color:#5A3F4A;">
+            {% for item in items %}
+            <li>
+                {% if item.product %}{{ item.product.name }}{% else %}Item{% endif %}
+                {% if item.size %} — size <strong>{{ item.size }}</strong>{% endif %}
+                × {{ item.quantity }}
+            </li>
+            {% endfor %}
+        </ul>
+        <a class="ok-btn" href="{% url 'shop:home' %}">Back to shop</a>
+    </div>
+</div>
+{% endblock %}
