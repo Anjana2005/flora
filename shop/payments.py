@@ -14,25 +14,25 @@ def get_upi_name():
 
 
 def get_whatsapp_number():
-    """Primary shop WhatsApp (first number)."""
+    """WhatsApp number that receives new order / paid confirmations."""
     numbers = get_whatsapp_numbers()
-    return numbers[0] if numbers else '918891331444'
+    return numbers[0] if numbers else '919605531101'
 
 
 def get_whatsapp_numbers():
-    """Shop WhatsApp number(s) — digits with country code."""
+    """Order-notification WhatsApp number(s) — digits with country code."""
     configured = getattr(settings, 'WHATSAPP_SHOP_NUMBERS', None) or []
     numbers = []
     for n in configured:
         digits = ''.join(ch for ch in str(n) if ch.isdigit())
         if digits and digits not in numbers:
             numbers.append(digits)
-    primary = getattr(settings, 'WHATSAPP_ORDER_NUMBER', None) or '918891331444'
+    primary = getattr(settings, 'WHATSAPP_ORDER_NUMBER', None) or '919605531101'
     primary = ''.join(ch for ch in str(primary) if ch.isdigit())
     if primary and primary not in numbers:
         numbers.insert(0, primary)
     if not numbers:
-        numbers = ['918891331444']
+        numbers = ['919605531101']
     return numbers
 
 
