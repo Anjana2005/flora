@@ -54,7 +54,7 @@ def _amount_str(amount):
 
 
 # Payment QR is valid for this many seconds, then rebuilt with a new code
-QR_ROTATE_SECONDS = 120
+QR_ROTATE_SECONDS = 300  # 5 minutes
 
 
 def current_qr_slot(now=None):
