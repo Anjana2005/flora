@@ -1534,20 +1534,24 @@ def order_payment_qr_api(request, order_id):
 
 def order_launch_payment(request, order_id):
     """
-    Called when the unique order UPI scanner is scanned (or pay link opened).
-    Always marks Paid=Yes in admin + reduces stock, then opens shop WhatsApp.
+    Called when this order's UPI scanner is scanned (or pay link opened).
+
+    1) Always sets order.paid = True so admin shows Paid: Yes ✓
+    2) Reduces stock once via mark_as_paid
+    3) Opens real UPI app for money transfer, then shop WhatsApp
     """
     from .payments import (
         build_payment_confirmation_whatsapp_url,
         build_order_payment_qr,
         is_valid_upi_id,
     )
-    from django.http import HttpResponseRedirect
+    from django.http import HttpResponse
+    from django.utils.html import escape
 
     order = get_object_or_404(Order, id=order_id)
     method = (request.GET.get('method') or 'scan').lower()
 
-    # Mark Paid in admin as soon as this order's scanner/pay link is used
+    # --- Admin Paid: Yes as soon as this order's scanner is used ---
     if not order.paid:
         payer = (order.payer_upi_id or '').strip().lower()
         if not is_valid_upi_id(payer):
@@ -1555,20 +1559,71 @@ def order_launch_payment(request, order_id):
         order.mark_as_paid(payer_upi_id=payer)
     order.refresh_from_db()
 
-    # Ensure paid stuck in DB (admin dashboard reads this)
+    # Hard fallback so dashboard never stays Paid: No after a scan hit
     if not order.paid:
-        Order.objects.filter(pk=order.pk).update(paid=True)
+        Order.objects.filter(pk=order.pk).update(paid=True, payer_upi_id=(order.payer_upi_id or 'via-scanner')[:100])
         order.refresh_from_db()
 
     whatsapp_url = build_payment_confirmation_whatsapp_url(order, request)
+    payment = build_order_payment_qr(order)
+    upi_link = payment.get('upi_link') or ''
+    amount = payment.get('amount_str') or ''
+    shop_upi = payment.get('shop_upi_id') or ''
+    order_ref = payment.get('order_ref') or f'FLORA{order.id}'
 
-    # Optional: still offer UPI deep link only if client wants method=upi
-    # Default after scanner: go directly to shop WhatsApp
-    if method in ('upi', 'gpay', 'phonepe', 'paytm', 'android', 'scan'):
-        # For scan: paid is set; go WhatsApp so shop is notified and admin shows Paid
-        return HttpResponseRedirect(whatsapp_url)
+    # Direct deep-link methods → UPI app only (paid already saved)
+    if method in ('upi', 'gpay', 'phonepe', 'paytm', 'android') and upi_link:
+        from django.http import HttpResponseRedirect
+        return HttpResponseRedirect(upi_link)
 
-    return HttpResponseRedirect(whatsapp_url)
+    # Scanner / default: confirm Paid, try UPI, then WhatsApp to shop
+    safe_wa = escape(whatsapp_url)
+    safe_upi = escape(upi_link)
+    safe_ref = escape(str(order_ref))
+    safe_amt = escape(str(amount))
+    safe_shop = escape(str(shop_upi))
+    html = f"""<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paid · {safe_ref}</title>
+<style>
+  body{{font-family:system-ui,sans-serif;background:#fff7f9;color:#5A3F4A;margin:0;padding:2rem 1rem;text-align:center}}
+  .card{{max-width:400px;margin:0 auto;background:#fff;border-radius:20px;padding:1.5rem;box-shadow:0 12px 28px rgba(232,122,150,.15)}}
+  h1{{font-size:1.35rem;margin:0 0 .5rem}}
+  .ok{{display:inline-block;background:#e8f5e9;color:#1b5e20;font-weight:800;padding:.35rem .75rem;border-radius:999px;margin:.5rem 0 1rem}}
+  .amt{{font-size:1.75rem;font-weight:800;color:#E87A96}}
+  a.btn{{display:block;margin:.55rem 0;padding:.85rem 1rem;border-radius:12px;text-decoration:none;font-weight:700}}
+  .upi{{background:#E87A96;color:#fff}}
+  .wa{{background:#25D366;color:#fff}}
+  p{{font-size:.92rem;line-height:1.45;color:#666}}
+</style>
+</head><body>
+<div class="card">
+  <h1>Order {safe_ref}</h1>
+  <div class="ok">Admin: Paid Yes ✓</div>
+  <div class="amt">₹{safe_amt}</div>
+  <p>Payment recorded for the shop. Complete UPI if your app did not open, then notify the shop on WhatsApp.</p>
+  <p style="font-size:.85rem">Shop UPI: <strong>{safe_shop}</strong></p>
+  <a class="btn upi" id="upi-btn" href="{safe_upi}">Open UPI payment</a>
+  <a class="btn wa" id="wa-btn" href="{safe_wa}">WhatsApp shop (tap Send)</a>
+</div>
+<script>
+(function(){{
+  var upi = {upi_link!r};
+  var wa = {whatsapp_url!r};
+  // Try UPI app first so money can transfer
+  if (upi) {{
+    try {{ window.location.href = upi; }} catch (e) {{}}
+  }}
+  // Then open shop WhatsApp so order is notified (admin already Paid: Yes)
+  setTimeout(function(){{
+    try {{ window.location.href = wa; }} catch (e) {{}}
+  }}, 2800);
+}})();
+</script>
+</body></html>"""
+    return HttpResponse(html)
 
 
 def order_confirm_paid(request, order_id):
