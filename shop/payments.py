@@ -107,8 +107,8 @@ def upi_app_response(
     confirm_url='',
 ):
     """
-    Open UPI app with amount + note pre-filled (HTML bridge; no 302 to upi://).
-    After money succeeds in the app, customer taps confirm_url → admin Paid: Yes.
+    Open UPI app with amount + order-note pre-filled.
+    No customer confirm button — admin Paid is set by order_launch_payment before this page.
     """
     from django.http import HttpResponse
     from django.utils.html import escape
@@ -121,47 +121,37 @@ def upi_app_response(
     safe_note = escape(note_code or '')
     safe_amt = escape(str(amount_str or ''))
     safe_shop = escape(shop_upi or get_upi_id())
-    safe_confirm = escape(confirm_url or '')
     paid_line = (
-        'Already paid in admin'
+        'Admin Paid: Yes ✓ · complete UPI below'
         if already_paid
-        else 'Step 1: Pay in UPI app · Step 2: Update admin below'
+        else 'Complete payment in UPI app'
     )
-    confirm_btn = ''
-    if confirm_url and not already_paid:
-        confirm_btn = (
-            f'<a class="btn confirm" href="{safe_confirm}">'
-            f'I paid successfully → show Paid in admin</a>'
-            f'<p style="margin-top:0.5rem;font-size:.85rem">'
-            f'After GPay/PhonePe shows <strong>Payment successful</strong>, '
-            f'tap the green button so the shop dashboard shows <strong>Paid: Yes</strong>.'
-            f'</p>'
-        )
     html = f"""<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Open UPI · {safe_note}</title>
+<title>Pay {safe_note}</title>
 <style>
   body{{font-family:system-ui,sans-serif;background:#fff7f9;color:#5A3F4A;margin:0;padding:2rem 1rem;text-align:center}}
   .card{{max-width:400px;margin:0 auto;background:#fff;border-radius:20px;padding:1.5rem;box-shadow:0 12px 28px rgba(232,122,150,.15)}}
-  .ok{{display:inline-block;background:#e3f2fd;color:#0d47a1;font-weight:800;padding:.4rem .8rem;border-radius:999px;margin:.5rem 0;font-size:.85rem}}
+  .ok{{display:inline-block;background:#e8f5e9;color:#1b5e20;font-weight:800;padding:.4rem .8rem;border-radius:999px;margin:.5rem 0;font-size:.85rem}}
+  .ord{{font-size:1.1rem;font-weight:900;letter-spacing:.04em;margin:.35rem 0}}
   .amt{{font-size:1.75rem;font-weight:800;color:#E87A96}}
   a.btn{{display:block;margin:.7rem 0 0;padding:.9rem 1rem;border-radius:12px;background:#E87A96;color:#fff;font-weight:800;text-decoration:none}}
-  a.btn.confirm{{background:#25D366;margin-top:1.1rem}}
   p{{font-size:.92rem;line-height:1.45;color:#666}}
   code{{font-weight:800;color:#5A3F4A}}
 </style>
 </head><body>
 <div class="card">
-  <h1 style="font-size:1.25rem;margin:0 0 .35rem">Opening UPI…</h1>
+  <h1 style="font-size:1.2rem;margin:0">Order scanner</h1>
+  <div class="ord">{safe_note}</div>
   <div class="ok">{paid_line}</div>
   <div class="amt">₹{safe_amt}</div>
   <p>Pay to <code>{safe_shop}</code><br>
-  Note will show as: <code>{safe_note}</code></p>
-  <a class="btn" id="upi-btn" href="{safe_upi}">Open UPI (note auto-filled)</a>
+  Note auto-filled: <code>{safe_note}</code></p>
+  <a class="btn" id="upi-btn" href="{safe_upi}">Open UPI &amp; pay</a>
   <a class="btn" href="{safe_intent}" style="background:#5A3F4A">Open on Android</a>
-  {confirm_btn}
+  <p style="margin-top:1rem;font-size:.85rem">No extra confirm needed — this order is already marked Paid in admin. Finish the UPI payment for money to transfer.</p>
 </div>
 <script>
 (function(){{
@@ -174,7 +164,7 @@ def upi_app_response(
     try {{ window.location.href = target; }} catch (e) {{}}
     setTimeout(function(){{
       try {{ window.location.href = u; }} catch (e) {{}}
-    }}, 600);
+    }}, 500);
   }}
 }})();
 </script>
@@ -256,22 +246,31 @@ def build_upi_qr_data_uri(upi_link, size=280):
 
 def build_order_payment_qr(order, size=280, scan_page_url=None, slot=None):
     """
-    Always build a pure UPI QR (not a website link).
+    Unique scanner per order number (FLORA#).
 
-    Scanning in GPay/PhonePe auto-fills amount + note (tn=FLORA#).
-    Opening UPI uses the same upi_link so note comes automatically.
-    scan_page_url is ignored for the QR image (kept only for API compat).
+    - upi_link: pure UPI with that order's amount + note (tn=FLORA#)
+    - If scan_page_url given: QR encodes the order-only site URL so scanning
+      auto-marks that order Paid (no customer confirm), then opens UPI with note
+    - Different orders → different QR (different note / amount / URL)
     """
     order_ref = build_order_note_code(order.id)
     payment_note = order_ref
     amount = order.get_total_cost()
     if slot is None:
         slot, _ = current_qr_slot()
-    tr = build_payment_ref(order.id, f'S{slot}')
+    tr = build_payment_ref(order.id, f'O{order.id}')
 
-    # Pure UPI only — note auto-fills in payment app
     upi_link = build_upi_link(amount, order_ref, note=payment_note)
-    qr_payload = upi_link
+
+    # Unique per-order scanner: site URL includes order id + note
+    if scan_page_url:
+        sep = '&' if '?' in scan_page_url else '?'
+        qr_payload = (
+            f'{scan_page_url}{sep}note={quote(payment_note, safe="")}'
+            f'&order={order.id}'
+        )
+    else:
+        qr_payload = upi_link
 
     return {
         'order_ref': order_ref,
@@ -284,7 +283,7 @@ def build_order_payment_qr(order, size=280, scan_page_url=None, slot=None):
         'upi_link': upi_link,
         'android_intent': build_android_upi_intent(upi_link),
         'qr_url': build_upi_qr_url(qr_payload, size=size),
-        'scan_page_url': '',
+        'scan_page_url': scan_page_url or '',
         'shop_upi_id': get_upi_id(),
     }
 

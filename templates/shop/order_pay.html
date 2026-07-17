@@ -223,55 +223,47 @@
         </div>
         {% endif %}
 
-        <!-- Pure UPI QR: scan or open → note + amount auto-fill in GPay/PhonePe -->
+        <!-- Unique scanner for this order number only -->
         <div class="scanner-section">
-            <h2><i class="fas fa-qrcode"></i> UPI scanner</h2>
+            <h2><i class="fas fa-qrcode"></i> Order scanner</h2>
+            <p style="font-size:1.35rem;font-weight:900;color:#E87A96;margin:0.25rem 0 0.5rem;letter-spacing:0.04em;">
+                {{ order_ref }}
+            </p>
             <p class="hint" style="margin-top:0;text-align:center;">
-                This is a <strong>real UPI QR</strong> (not a website link).<br>
-                In <strong>GPay / PhonePe → Scan</strong>, the app should open with:<br>
-                pay to <strong>{{ shop_upi_id }}</strong>, amount <strong>₹{{ amount_str }}</strong>,
-                and note <strong>{{ payment_note|default:order_ref }}</strong> already filled.
+                <strong>This QR is only for order {{ order_ref }}</strong>
+                (different from other orders).<br>
+                Scan it → admin becomes <strong>Paid: Yes</strong> automatically
+                (you do <strong>not</strong> need to confirm) → UPI opens with note
+                <strong>{{ payment_note|default:order_ref }}</strong> filled.
             </p>
             {% if qr_url %}
             <div class="qr-wrap">
-                <img src="{{ qr_url }}" alt="UPI pay {{ shop_upi_id }} {{ amount_str }} note {{ payment_note|default:order_ref }}">
+                <img src="{{ qr_url }}" alt="Scanner for order {{ order_ref }}">
             </div>
+            <p style="font-weight:800;margin:0.5rem 0 0;color:#5A3F4A;">{{ order_ref }} · ₹{{ amount_str }}</p>
             {% endif %}
             <div class="manual-box">
+                <div>Order: <code id="copy-note">{{ payment_note|default:order_ref }}</code></div>
                 <div>Shop UPI: <code id="shop-upi-copy">{{ shop_upi_id }}</code></div>
                 <div>Amount: <code>₹{{ amount_str }}</code></div>
-                <div>Note (auto in app): <code id="copy-note">{{ payment_note|default:order_ref }}</code></div>
             </div>
             {% if open_upi_url %}
             <a class="btn-pay" href="{{ open_upi_url }}" style="margin-top:0.85rem;">
-                Step 1 · Open UPI app (pay now)
+                Scan / open this order’s UPI (auto Paid: Yes)
             </a>
             {% endif %}
-
-            <!-- Step 2: bank never notifies the website — customer updates admin after real pay -->
-            <a class="btn-pay" href="{{ confirm_url }}"
-               style="margin-top:0.75rem;background:#25D366;box-shadow:0 10px 22px rgba(37,211,102,0.28);">
-                Step 2 · I paid successfully → Paid: Yes in admin
-            </a>
-            <p class="hint" style="text-align:center;margin-top:0.5rem;">
-                After GPay/PhonePe shows <strong>Payment successful</strong>, tap the green button.
-                Only then the admin dashboard shows <strong>Paid: Yes ✓</strong>.
-            </p>
-
             <button type="button" class="btn-secondary" id="copy-upi-btn" style="cursor:pointer;width:100%;font-family:inherit;margin-top:0.55rem;">
                 Copy shop UPI ID
             </button>
             <button type="button" class="btn-secondary" id="copy-note-btn" style="cursor:pointer;width:100%;font-family:inherit;">
-                Copy note code
+                Copy order note {{ payment_note|default:order_ref }}
             </button>
         </div>
 
         <div class="note">
-            <strong>Why admin was empty after scan:</strong>
-            UPI apps do not tell this website when money is taken.
-            So: <strong>1)</strong> Pay with scanner · <strong>2)</strong> Tap green
-            “I paid successfully” → admin <strong>Paid: Yes</strong> + WhatsApp to shop.<br><br>
-            Shop can also open the order and tap <strong>Mark as Paid</strong> after checking the bank app.
+            <strong>Unique scanner:</strong> Order 30 → <code>FLORA30</code>, Order 31 → <code>FLORA31</code>, each QR different.<br>
+            <strong>No customer confirm:</strong> Using this order’s scanner marks admin
+            <strong>Paid: Yes ✓</strong> for that order only, then opens UPI so money can transfer.
         </div>
 
         <ul class="items">
