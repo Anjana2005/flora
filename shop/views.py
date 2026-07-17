@@ -1367,9 +1367,17 @@ def admin_offer_delete(request, id):
 def checkout(request):
     """Place order, then show UPI payment page (also used by cart checkout form)."""
     from cart.cart import Cart
-    from .payments import build_order_whatsapp_url
+    from .payments import get_upi_id, _amount_str
 
     cart = Cart(request)
+
+    def _checkout_context():
+        return {
+            'cart': cart,
+            'upi_id': get_upi_id(),
+            'order_total': cart.get_total_price(),
+            'order_total_str': _amount_str(cart.get_total_price()),
+        }
 
     if len(cart) == 0 and request.method != "POST":
         messages.warning(request, 'Your cart is empty!')
@@ -1388,7 +1396,7 @@ def checkout(request):
 
             if not first_name or not phone or not address:
                 messages.error(request, 'Please fill name, phone and address.')
-                return render(request, "cart/checkout.html", {"cart": cart})
+                return render(request, "cart/checkout.html", _checkout_context())
 
             order = Order.objects.create(
                 first_name=first_name,
@@ -1416,7 +1424,7 @@ def checkout(request):
         except Exception as e:
             messages.error(request, f'Error placing order: {str(e)}')
 
-    return render(request, "cart/checkout.html", {"cart": cart})
+    return render(request, "cart/checkout.html", _checkout_context())
 
 
 def order_pay(request, order_id):

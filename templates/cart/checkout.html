@@ -381,10 +381,30 @@
                     <input type="hidden" name="country" value="India">
                 </div>
 
-                <!-- Billing Information -->
-                <div class="form-section">
-                    <h2><i class="fas fa-credit-card"></i> Billing Information</h2>   
+                <!-- UPI payment details -->
+                <div class="form-section" style="background: rgba(244,167,185,0.12); border-radius: 16px; padding: 1.25rem;">
+                    <h2><i class="fas fa-university"></i> Pay with UPI</h2>
+                    <p style="color: var(--text-light); margin-bottom: 1rem;">
+                        After you place the order you will pay to this UPI ID.
+                        Admin shows <strong>Paid: Yes</strong> only after you complete payment on the next page.
+                    </p>
+                    <div style="background:#fff;border-radius:12px;padding:1rem;border:1px solid rgba(232,122,150,0.25);">
+                        <p style="margin:0.35rem 0;font-size:0.95rem;color:#666;">UPI ID (pay to)</p>
+                        <p style="margin:0 0 0.75rem;font-size:1.25rem;font-weight:800;color:#5A3F4A;word-break:break-all;" id="checkout-upi-id">
+                            {{ upi_id }}
+                        </p>
+                        <button type="button" onclick="copyCheckoutUpi()" style="border:1px dashed #E87A96;background:transparent;color:#E87A96;border-radius:999px;padding:0.4rem 1rem;font-weight:700;cursor:pointer;margin-bottom:0.75rem;">
+                            Copy UPI ID
+                        </button>
+                        <p style="margin:0.5rem 0 0;font-size:0.95rem;color:#666;">Amount to pay</p>
+                        <p style="margin:0;font-size:1.35rem;font-weight:800;color:#E87A96;">₹{{ order_total_str|default:cart.get_total_price }}</p>
+                    </div>
+                    <p style="margin:0.9rem 0 0;font-size:0.9rem;color:#777;">
+                        Use GPay / PhonePe / Paytm → Send money to the UPI ID above.
+                        Then use <strong>Pay with UPI</strong> on the next screen so the order is marked paid and stock updates.
+                    </p>
                 </div>
+
                 <!-- Terms & Conditions -->
                 <div class="form-section">
                     <label style="display: flex; align-items: flex-start; gap: 0.5rem; cursor: pointer;">
@@ -396,7 +416,7 @@
                 </div>
 
                 <button type="submit" class="order-btn">
-                    <i class="fas fa-lock"></i> Place Order
+                    <i class="fas fa-lock"></i> Place Order &amp; Pay
                 </button>
             </form>
         </div>
@@ -410,7 +430,7 @@
                 <div class="order-item">
                     <span class="item-name">
                         {{ item.product.name }}<br>
-                        <small style="color: var(--text-light);">Qty: {{ item.quantity }}</small>
+                        <small style="color: var(--text-light);">Qty: {{ item.quantity }}{% if item.size %} · Size: {{ item.size }}{% endif %}</small>
                     </span>
                     <span class="item-price">₹{{ item.total_price }}</span>
                 </div>
@@ -427,14 +447,35 @@
                 <span id="total-amount">₹{{ cart.get_total_price }}</span>
             </div>
 
+            <div style="background: #fff5f8; border: 1px solid rgba(232,122,150,0.3); padding: 1rem; border-radius: 12px; margin-top: 1rem;">
+                <p style="margin:0 0 0.4rem;font-weight:700;color:#5A3F4A;"><i class="fas fa-qrcode"></i> Pay to UPI</p>
+                <p style="margin:0;font-weight:800;font-size:1.05rem;color:#E87A96;word-break:break-all;">{{ upi_id }}</p>
+                <p style="margin:0.5rem 0 0;font-size:0.9rem;color:#666;">Total: <strong>₹{{ order_total_str|default:cart.get_total_price }}</strong></p>
+                <p style="margin:0.5rem 0 0;font-size:0.85rem;color:#888;">Paid status updates after you finish payment on the next page.</p>
+            </div>
+
             <!-- Order Info -->
             <div style="background: var(--bg-light); padding: 1rem; border-radius: 8px; margin-top: 1rem; font-size: 0.9rem; color: var(--text-light);">
-                <p style="margin: 0.5rem 0;"><i class="fas fa-check" style="color: #27AE60;"></i> Secure checkout</p>
-                <p style="margin: 0.5rem 0;"><i class="fas fa-check" style="color: #27AE60;"></i> Free returns</p>
-                <p style="margin: 0.5rem 0;"><i class="fas fa-check" style="color: #27AE60;"></i> 100% authentic</p>
+                <p style="margin: 0.5rem 0;"><i class="fas fa-check" style="color: #27AE60;"></i> UPI payment</p>
+                <p style="margin: 0.5rem 0;"><i class="fas fa-check" style="color: #27AE60;"></i> Stock reduces only after paid</p>
+                <p style="margin: 0.5rem 0;"><i class="fas fa-check" style="color: #27AE60;"></i> Order details on WhatsApp</p>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+function copyCheckoutUpi() {
+    var el = document.getElementById('checkout-upi-id');
+    var text = (el.innerText || el.textContent || '').trim();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () {
+            alert('UPI ID copied: ' + text);
+        });
+    } else {
+        prompt('Copy UPI ID:', text);
+    }
+}
+</script>
 
 {% endblock %}
