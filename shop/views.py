@@ -1612,24 +1612,18 @@ def order_confirm_paid(request, order_id):
 
 
 def order_paid_success(request, order_id):
-    from .payments import (
-        build_payment_confirmation_whatsapp_url,
-        build_order_whatsapp_url,
-    )
+    """If somehow reached without WhatsApp, send them to shop WhatsApp immediately."""
+    from .payments import build_payment_confirmation_whatsapp_url
+    from django.http import HttpResponseRedirect
 
     order = get_object_or_404(Order, id=order_id)
     if not order.paid:
         return redirect('shop:order_pay', order_id=order.id)
 
+    # Prefer going straight to shop WhatsApp
     whatsapp_url = build_payment_confirmation_whatsapp_url(order, request)
-    auto_open = False
-    if request.session.get('open_whatsapp_paid') == order.id:
-        auto_open = True
-        try:
-            del request.session['open_whatsapp_paid']
-        except KeyError:
-            pass
-        request.session.pop('whatsapp_paid_url', None)
+    if request.GET.get('stay') != '1':
+        return HttpResponseRedirect(whatsapp_url)
 
     return render(
         request,
@@ -1639,8 +1633,8 @@ def order_paid_success(request, order_id):
             'order_ref': f'FLORA{order.id}',
             'total': order.get_total_cost(),
             'items': order.items.select_related('product').all(),
-            'whatsapp_url': whatsapp_url or build_order_whatsapp_url(order, request, paid=True),
-            'auto_open_whatsapp': auto_open,
+            'whatsapp_url': whatsapp_url,
+            'auto_open_whatsapp': True,
             'payer_upi_id': order.payer_upi_id,
         },
     )
