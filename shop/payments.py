@@ -1,84 +1,92 @@
 """UPI / WhatsApp helpers for Flora orders."""
-from urllib.parse import quote, urlencode
+from urllib.parse import quote
 
 from django.conf import settings
 
 
 def get_upi_id():
-    return getattr(settings, 'UPI_ID', 'flora1101@axl')
+    # Keep VPA exactly as registered in the bank/UPI app (no spaces)
+    return (getattr(settings, 'UPI_ID', None) or 'flora1101@axl').strip()
 
 
 def get_upi_name():
-    return getattr(settings, 'UPI_MERCHANT_NAME', 'Flora Store')
+    return (getattr(settings, 'UPI_MERCHANT_NAME', None) or 'Flora').strip()
 
 
 def get_whatsapp_number():
     return getattr(settings, 'WHATSAPP_ORDER_NUMBER', '919074860867')
 
 
+def _amount_str(amount):
+    """UPI amount: two decimals, no commas, no currency symbol."""
+    return f"{float(amount):.2f}"
+
+
 def build_upi_link(amount, order_ref, note=None):
     """
-    Build a standard UPI deep link.
-    amount: number or Decimal
-    order_ref: e.g. FLORA12
+    Build a standard UPI deep link (NPCI pay intent).
+
+    Important: do NOT pre-percent-encode the whole query with urlencode and then
+    encode again for QR — that turns @ into %2540 and apps reject the payee.
+    Keep `pa` (UPI ID) raw; only encode name/note values that may have spaces.
     """
-    am = f"{float(amount):.2f}"
-    tn = note or f"Order {order_ref}"
-    # urlencode handles spaces/special chars once (do NOT re-quote later)
-    query = urlencode(
-        {
-            'pa': get_upi_id(),
-            'pn': get_upi_name(),
-            'am': am,
-            'cu': 'INR',
-            'tn': tn[:80],  # UPI note length limit on some apps
-        }
+    pa = get_upi_id()
+    pn = get_upi_name()
+    am = _amount_str(amount)
+    tn = (note or f"Order {order_ref}")[:50]
+
+    # Raw @ in pa is required so single encoding (QR / browser) is correct
+    return (
+        "upi://pay"
+        f"?pa={pa}"
+        f"&pn={quote(pn, safe='')}"
+        f"&am={am}"
+        f"&cu=INR"
+        f"&tn={quote(tn, safe='')}"
     )
-    return f"upi://pay?{query}"
 
 
 def build_upi_qr_url(upi_link, size=280):
-    """QR image URL that encodes the UPI deep link (works on mobile scanners)."""
+    """
+    QR image that encodes the UPI string once.
+    Encode the full deep-link once for the image API query param.
+    """
     return (
         "https://api.qrserver.com/v1/create-qr-code/"
-        f"?size={size}x{size}&data={quote(upi_link, safe='')}"
+        f"?size={size}x{size}&margin=8&data={quote(upi_link, safe='')}"
     )
 
 
 def build_gpay_link(amount, order_ref):
-    """Google Pay UPI intent (Android)."""
-    am = f"{float(amount):.2f}"
-    query = urlencode(
-        {
-            'pa': get_upi_id(),
-            'pn': get_upi_name(),
-            'am': am,
-            'cu': 'INR',
-            'tn': f"Order {order_ref}"[:80],
-        }
-    )
+    """Google Pay — try modern gpay:// first; tez:// as fallback is same query."""
+    base = build_upi_link(amount, order_ref)
+    # Same query string as upi://pay?...
+    query = base.split('?', 1)[1]
+    return f"gpay://upi/pay?{query}"
+
+
+def build_gpay_tez_link(amount, order_ref):
+    base = build_upi_link(amount, order_ref)
+    query = base.split('?', 1)[1]
     return f"tez://upi/pay?{query}"
 
 
 def build_phonepe_link(amount, order_ref):
-    am = f"{float(amount):.2f}"
-    query = urlencode(
-        {
-            'pa': get_upi_id(),
-            'pn': get_upi_name(),
-            'am': am,
-            'cu': 'INR',
-            'tn': f"Order {order_ref}"[:80],
-        }
-    )
+    base = build_upi_link(amount, order_ref)
+    query = base.split('?', 1)[1]
     return f"phonepe://pay?{query}"
+
+
+def build_paytm_link(amount, order_ref):
+    base = build_upi_link(amount, order_ref)
+    query = base.split('?', 1)[1]
+    return f"paytmmp://pay?{query}"
 
 
 def build_order_whatsapp_url(order, request=None):
     """
-    WhatsApp share message for shop owner.
-    Uses PLAIN UPI id + HTTPS payment page (upi:// is often not clickable in WA
-    and gets mangled by double-encoding).
+    WhatsApp share for the shop.
+    Plain UPI ID + amount (never embed a fragile upi:// inside WA text).
     """
     order_id = f"FLORA{order.id}"
     total = float(order.get_total_cost())
@@ -127,26 +135,23 @@ def build_order_whatsapp_url(order, request=None):
 
     payment_page = ""
     if request is not None:
-        payment_page = request.build_absolute_uri(
-            f"/order/{order.id}/pay/"
-        )
+        payment_page = request.build_absolute_uri(f"/order/{order.id}/pay/")
 
     lines.extend(
         [
             f"*Total Amount:* Rs {total:.2f}",
             "",
-            "*Payment (UPI):*",
-            f"UPI ID: {get_upi_id()}",
-            f"Name: {get_upi_name()}",
-            f"Amount: Rs {total:.2f}",
-            f"Note: Order {order_id}",
+            "*How to pay (UPI):*",
+            f"1) Open GPay / PhonePe / Paytm",
+            f"2) Send money to: {get_upi_id()}",
+            f"3) Amount: Rs {total:.2f}",
+            f"4) Add note: {order_id}",
         ]
     )
     if payment_page:
-        lines.extend(["", "Customer payment page:", payment_page])
+        lines.extend(["", "Or open payment page:", payment_page])
 
     lines.extend(["", "Location Map:", maps_link])
 
     message = "\n".join(lines)
-    # Encode the whole message ONCE only
     return "https://wa.me/" + get_whatsapp_number() + "?text=" + quote(message)

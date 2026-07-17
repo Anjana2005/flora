@@ -29,6 +29,26 @@
         color: #E87A96;
         margin: 0.75rem 0 1.25rem;
     }
+    .alert-info {
+        background: #e8f5e9;
+        color: #1b5e20;
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+        font-size: 0.92rem;
+        text-align: left;
+        margin-bottom: 1rem;
+        line-height: 1.45;
+    }
+    .alert-warn {
+        background: #fff8e1;
+        color: #6d4c00;
+        border-radius: 12px;
+        padding: 0.85rem 1rem;
+        font-size: 0.9rem;
+        text-align: left;
+        margin: 1rem 0;
+        line-height: 1.45;
+    }
     .qr-box {
         background: #fff;
         border-radius: 16px;
@@ -49,8 +69,19 @@
         margin: 1rem 0;
         font-size: 1.05rem;
         word-break: break-all;
+        text-align: left;
     }
     .upi-id-box strong { color: #5A3F4A; }
+    .steps {
+        text-align: left;
+        background: #fafafa;
+        border-radius: 12px;
+        padding: 1rem 1.1rem 1rem 1.6rem;
+        margin: 1rem 0;
+        color: #5A3F4A;
+        line-height: 1.55;
+    }
+    .steps li { margin: 0.35rem 0; }
     .pay-btn {
         display: block;
         width: 100%;
@@ -64,9 +95,12 @@
         color: #fff;
         background: linear-gradient(135deg, #F4A7B9, #E87A96);
         box-shadow: 0 10px 22px rgba(232,122,150,0.28);
+        cursor: pointer;
+        box-sizing: border-box;
     }
     .pay-btn.gpay { background: linear-gradient(135deg, #4285F4, #34A853); }
     .pay-btn.phonepe { background: linear-gradient(135deg, #5f259f, #7b3fb8); }
+    .pay-btn.paytm { background: linear-gradient(135deg, #00baf2, #002970); }
     .pay-btn.wa { background: linear-gradient(135deg, #25D366, #128C7E); }
     .pay-btn.secondary {
         background: #fff;
@@ -87,8 +121,14 @@
         color: #5A3F4A;
     }
     .items li { margin: 0.35rem 0; }
-    .copy-btn {
+    .copy-row {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
         margin-top: 0.5rem;
+    }
+    .copy-btn {
         background: transparent;
         border: 1px dashed #E87A96;
         color: #E87A96;
@@ -107,54 +147,80 @@
         <p>Order <strong>{{ order_ref }}</strong></p>
         <div class="pay-amount">₹{{ total }}</div>
 
-        <div class="qr-box">
-            <img src="{{ qr_url }}" alt="UPI QR code for payment">
+        <div class="alert-info">
+            <strong>If the app says “money has not been debited”</strong> — that means
+            the payment <em>failed</em> or was cancelled. Your money is still with you.
+            Use the <strong>manual steps</strong> below (most reliable).
         </div>
-        <p class="hint">Scan this QR with any UPI app (GPay, PhonePe, Paytm, BHIM)</p>
+
+        <div class="qr-box">
+            <img src="{{ qr_url }}" alt="UPI QR code for payment" id="upi-qr">
+        </div>
+        <p class="hint">Scan this QR in GPay / PhonePe / Paytm / BHIM</p>
 
         <div class="upi-id-box">
-            Pay to: <strong id="upi-id">{{ upi_id }}</strong><br>
+            Pay to UPI ID: <strong id="upi-id">{{ upi_id }}</strong><br>
             Name: <strong>{{ upi_name }}</strong><br>
-            Amount: <strong>₹{{ total }}</strong><br>
-            Note: <strong>{{ order_ref }}</strong>
+            Amount: <strong id="pay-amount">₹{{ total }}</strong><br>
+            Note / message: <strong id="pay-note">{{ order_ref }}</strong>
         </div>
-        <button type="button" class="copy-btn" onclick="copyUpi()">Copy UPI ID</button>
+        <div class="copy-row">
+            <button type="button" class="copy-btn" onclick="copyText('upi-id', 'UPI ID')">Copy UPI ID</button>
+            <button type="button" class="copy-btn" onclick="copyText('pay-note', 'Note')">Copy note</button>
+        </div>
 
-        <!-- Direct app intents — work on mobile -->
-        <a class="pay-btn" href="{{ upi_link }}">Pay with any UPI app</a>
-        <a class="pay-btn gpay" href="{{ gpay_link }}">Pay with Google Pay</a>
-        <a class="pay-btn phonepe" href="{{ phonepe_link }}">Pay with PhonePe</a>
+        <ol class="steps">
+            <li>Open <strong>GPay / PhonePe / Paytm</strong> on your phone</li>
+            <li>Tap <strong>Send money / Pay</strong> → <strong>UPI ID / Number</strong></li>
+            <li>Paste UPI: <strong>{{ upi_id }}</strong></li>
+            <li>Enter amount <strong>₹{{ total }}</strong></li>
+            <li>In remarks/note put <strong>{{ order_ref }}</strong></li>
+            <li>Pay with UPI PIN — you should see <strong>Payment successful</strong></li>
+            <li>Then tap WhatsApp below to notify the shop with screenshot if needed</li>
+        </ol>
 
-        <p class="hint">
-            On phone: tap a button above.<br>
-            On computer: scan the QR with your phone’s UPI app.
-        </p>
+        <div class="alert-warn">
+            Deep-link buttons sometimes fail depending on the phone/app.
+            Manual pay to <strong>{{ upi_id }}</strong> always works if that UPI ID is active.
+            Test the ID in your own GPay: “Pay” → enter <strong>{{ upi_id }}</strong> —
+            if it says “invalid UPI”, the shop UPI ID must be updated.
+        </div>
+
+        <!-- Deep links (mobile); encoding fixed so @ is not double-escaped -->
+        <a class="pay-btn" href="{{ upi_link }}">Open default UPI app</a>
+        <a class="pay-btn gpay" href="{{ gpay_link }}">Open Google Pay</a>
+        <a class="pay-btn phonepe" href="{{ phonepe_link }}">Open PhonePe</a>
+        <a class="pay-btn paytm" href="{{ paytm_link }}">Open Paytm</a>
 
         <ul class="items">
             {% for item in items %}
             <li>
-                {{ item.product.name }}{% if item.size %} ({{ item.size }}){% endif %}
+                {% if item.product %}{{ item.product.name }}{% else %}Item{% endif %}
+                {% if item.size %} ({{ item.size }}){% endif %}
                 × {{ item.quantity }} — ₹{{ item.price }}
             </li>
+            {% empty %}
+            <li>Order total: ₹{{ total }}</li>
             {% endfor %}
         </ul>
 
         <a class="pay-btn wa" href="{{ whatsapp_url }}" target="_blank" rel="noopener">
-            Notify shop on WhatsApp after paying
+            I paid — notify shop on WhatsApp
         </a>
         <a class="pay-btn secondary" href="{% url 'shop:home' %}">Back to shop</a>
     </div>
 </div>
 
 <script>
-function copyUpi() {
-    var id = document.getElementById('upi-id').innerText;
+function copyText(id, label) {
+    var el = document.getElementById(id);
+    var text = (el.innerText || el.textContent || '').replace('₹', '').trim();
     if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(id).then(function () {
-            alert('UPI ID copied: ' + id);
+        navigator.clipboard.writeText(text).then(function () {
+            alert(label + ' copied: ' + text);
         });
     } else {
-        prompt('Copy UPI ID:', id);
+        prompt('Copy ' + label + ':', text);
     }
 }
 </script>
