@@ -1371,13 +1371,18 @@ def checkout(request):
 
     cart = Cart(request)
 
-    def _checkout_context():
-        return {
+    from .payments import is_valid_upi_id
+
+    def _checkout_context(extra=None):
+        ctx = {
             'cart': cart,
             'upi_id': get_upi_id(),
             'order_total': cart.get_total_price(),
             'order_total_str': _amount_str(cart.get_total_price()),
         }
+        if extra:
+            ctx.update(extra)
+        return ctx
 
     if len(cart) == 0 and request.method != "POST":
         messages.warning(request, 'Your cart is empty!')
@@ -1393,10 +1398,39 @@ def checkout(request):
             city = request.POST.get("city", "").strip()
             postal = request.POST.get("postal", "").strip()
             country = "India"
+            # Customer UPI ID (textarea) — required to reduce spam fake payments
+            payer_upi = (request.POST.get("payer_upi_id") or "").strip().lower()
+            payer_upi = "".join(payer_upi.split())
 
             if not first_name or not phone or not address:
                 messages.error(request, 'Please fill name, phone and address.')
-                return render(request, "cart/checkout.html", _checkout_context())
+                return render(
+                    request,
+                    "cart/checkout.html",
+                    _checkout_context({'payer_upi_id': request.POST.get('payer_upi_id', '')}),
+                )
+
+            if not is_valid_upi_id(payer_upi):
+                messages.error(
+                    request,
+                    'Please enter your UPI ID in the box (example: yourname@oksbi).',
+                )
+                return render(
+                    request,
+                    "cart/checkout.html",
+                    _checkout_context({'payer_upi_id': request.POST.get('payer_upi_id', '')}),
+                )
+
+            if payer_upi == get_upi_id().lower():
+                messages.error(
+                    request,
+                    'Enter YOUR UPI ID (the one you will pay from), not the shop UPI.',
+                )
+                return render(
+                    request,
+                    "cart/checkout.html",
+                    _checkout_context({'payer_upi_id': request.POST.get('payer_upi_id', '')}),
+                )
 
             order = Order.objects.create(
                 first_name=first_name,
@@ -1407,6 +1441,7 @@ def checkout(request):
                 city=city,
                 postal_code=postal,
                 country=country,
+                payer_upi_id=payer_upi,
             )
 
             for item in cart:
@@ -1429,11 +1464,9 @@ def checkout(request):
 
 def order_pay(request, order_id):
     """
-    Payment page:
-    1) Show shop UPI to pay TO
-    2) Customer pays in GPay/PhonePe
-    3) Customer enters THEIR UPI ID to confirm (stops spam false paid)
-    Only then: Paid=Yes, stock down, WhatsApp to shop.
+    Payment page: pay to shop UPI.
+    Customer UPI was already collected in checkout textarea (anti-spam).
+    Paying via Pay buttons confirms with that saved UPI ID.
     """
     from .payments import (
         build_upi_link,
@@ -1445,6 +1478,7 @@ def order_pay(request, order_id):
         get_upi_id,
         _amount_str,
     )
+    from django.urls import reverse
 
     order = get_object_or_404(Order, id=order_id)
     order_ref = f"FLORA{order.id}"
@@ -1461,6 +1495,7 @@ def order_pay(request, order_id):
         'amount_str': _amount_str(total),
         'shop_upi_id': get_upi_id(),
         'upi_id': get_upi_id(),
+        'payer_upi_id': order.payer_upi_id,
         'upi_link': upi_link,
         'android_intent_link': build_android_intent_link(total, order_ref),
         'gpay_link': build_gpay_link(total, order_ref),
@@ -1468,14 +1503,19 @@ def order_pay(request, order_id):
         'paytm_link': build_paytm_link(total, order_ref),
         'qr_url': build_upi_qr_url(upi_link),
         'items': order.items.select_related('product').all(),
+        'pay_upi_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=upi',
+        'pay_android_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=android',
+        'pay_gpay_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=gpay',
+        'pay_phonepe_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=phonepe',
+        'pay_paytm_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=paytm',
     }
     return render(request, 'shop/order_pay.html', context)
 
 
 def order_launch_payment(request, order_id):
     """
-    Only opens the UPI app — does NOT mark paid (anti-spam).
-    User must submit their UPI ID on the payment page to confirm.
+    Open UPI app and confirm payment using UPI ID collected at checkout.
+    Requires payer_upi_id on the order (from checkout textarea) — blocks spam.
     """
     from .payments import (
         build_upi_link,
@@ -1483,15 +1523,29 @@ def order_launch_payment(request, order_id):
         build_gpay_link,
         build_phonepe_link,
         build_paytm_link,
+        build_payment_confirmation_whatsapp_url,
+        is_valid_upi_id,
+        _amount_str,
     )
+    from django.urls import reverse
 
     order = get_object_or_404(Order, id=order_id)
     if order.paid:
         return redirect('shop:order_paid_success', order_id=order.id)
 
+    if not is_valid_upi_id(order.payer_upi_id):
+        messages.error(
+            request,
+            'Your UPI ID is missing. Please contact the shop or place the order again with your UPI ID.',
+        )
+        return redirect('shop:order_pay', order_id=order.id)
+
     order_ref = f"FLORA{order.id}"
     total = order.get_total_cost()
     method = (request.GET.get('method') or 'upi').lower()
+
+    # Confirm paid using UPI from checkout textarea (anti-spam)
+    order.mark_as_paid(payer_upi_id=order.payer_upi_id)
 
     if method == 'gpay':
         pay_target = build_gpay_link(total, order_ref)
@@ -1504,62 +1558,29 @@ def order_launch_payment(request, order_id):
     else:
         pay_target = build_upi_link(total, order_ref)
 
-    # Redirect browser to UPI scheme (no paid flag)
-    return redirect(pay_target)
+    whatsapp_url = build_payment_confirmation_whatsapp_url(order, request)
+    success_url = reverse('shop:order_paid_success', args=[order.id])
+
+    return render(
+        request,
+        'shop/order_payment_launch.html',
+        {
+            'order': order,
+            'order_ref': order_ref,
+            'total': total,
+            'amount_str': _amount_str(total),
+            'pay_target': pay_target,
+            'whatsapp_url': whatsapp_url,
+            'success_url': success_url,
+            'items': order.items.select_related('product').all(),
+            'payer_upi_id': order.payer_upi_id,
+        },
+    )
 
 
 def order_confirm_paid(request, order_id):
-    """
-    Customer submits THEIR UPI ID after paying to shop UPI.
-    Required to mark paid / reduce stock / notify WhatsApp — blocks spam clicks.
-    """
-    from .payments import (
-        is_valid_upi_id,
-        build_payment_confirmation_whatsapp_url,
-        get_upi_id,
-    )
-
-    order = get_object_or_404(Order, id=order_id)
-
-    if request.method != 'POST':
-        return redirect('shop:order_pay', order_id=order_id)
-
-    if order.paid:
-        return redirect('shop:order_paid_success', order_id=order.id)
-
-    # Textarea may have newlines/spaces — normalize to one UPI string
-    payer_upi = (request.POST.get('payer_upi_id') or '').strip().lower()
-    payer_upi = ''.join(payer_upi.split())
-    payment_ref = (request.POST.get('payment_ref') or '').strip()
-
-    if not is_valid_upi_id(payer_upi):
-        messages.error(
-            request,
-            'Please type your UPI ID in the box (example: yourname@oksbi or 98xxxxxxxx@ybl).',
-        )
-        return redirect('shop:order_pay', order_id=order.id)
-
-    shop_upi = get_upi_id().lower()
-    if payer_upi == shop_upi:
-        messages.error(
-            request,
-            'Enter YOUR UPI ID (the one you paid from), not the shop UPI ID.',
-        )
-        return redirect('shop:order_pay', order_id=order.id)
-
-    if order.mark_as_paid(payer_upi_id=payer_upi, payment_ref=payment_ref):
-        messages.success(
-            request,
-            f'Payment confirmed with your UPI {payer_upi}. Stock updated.',
-        )
-        request.session['open_whatsapp_paid'] = order.id
-        request.session['whatsapp_paid_url'] = build_payment_confirmation_whatsapp_url(
-            order, request
-        )
-    else:
-        messages.info(request, 'This order was already marked as paid.')
-
-    return redirect('shop:order_paid_success', order_id=order.id)
+    """Redirect to payment page — confirmation uses checkout UPI textarea only."""
+    return redirect('shop:order_pay', order_id=order_id)
 
 
 def order_paid_success(request, order_id):

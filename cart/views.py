@@ -96,17 +96,20 @@ def cart_detail(request):
 
 def checkout(request):
     """Checkout — place order then go to UPI payment page."""
-    from shop.payments import get_upi_id, _amount_str
+    from shop.payments import get_upi_id, _amount_str, is_valid_upi_id
 
     cart = Cart(request)
 
-    def _checkout_context():
-        return {
+    def _checkout_context(extra=None):
+        ctx = {
             'cart': cart,
             'upi_id': get_upi_id(),
             'order_total': cart.get_total_price(),
             'order_total_str': _amount_str(cart.get_total_price()),
         }
+        if extra:
+            ctx.update(extra)
+        return ctx
 
     if len(cart) == 0:
         messages.warning(request, 'Your cart is empty!')
@@ -122,10 +125,38 @@ def checkout(request):
             city = request.POST.get('city', '').strip()
             postal = request.POST.get('postal', '').strip()
             country = 'India'
+            payer_upi = (request.POST.get('payer_upi_id') or '').strip().lower()
+            payer_upi = ''.join(payer_upi.split())
 
             if not first_name or not phone or not address:
                 messages.error(request, 'Please fill name, phone and address.')
-                return render(request, 'cart/checkout.html', _checkout_context())
+                return render(
+                    request,
+                    'cart/checkout.html',
+                    _checkout_context({'payer_upi_id': request.POST.get('payer_upi_id', '')}),
+                )
+
+            if not is_valid_upi_id(payer_upi):
+                messages.error(
+                    request,
+                    'Please enter your UPI ID in the box (example: yourname@oksbi).',
+                )
+                return render(
+                    request,
+                    'cart/checkout.html',
+                    _checkout_context({'payer_upi_id': request.POST.get('payer_upi_id', '')}),
+                )
+
+            if payer_upi == get_upi_id().lower():
+                messages.error(
+                    request,
+                    'Enter YOUR UPI ID (the one you will pay from), not the shop UPI.',
+                )
+                return render(
+                    request,
+                    'cart/checkout.html',
+                    _checkout_context({'payer_upi_id': request.POST.get('payer_upi_id', '')}),
+                )
 
             order = Order.objects.create(
                 first_name=first_name,
@@ -136,6 +167,7 @@ def checkout(request):
                 city=city,
                 postal_code=postal,
                 country=country,
+                payer_upi_id=payer_upi,
             )
 
             for item in cart:

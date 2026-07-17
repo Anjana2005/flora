@@ -381,14 +381,24 @@
                     <input type="hidden" name="country" value="India">
                 </div>
 
-                <!-- UPI payment details -->
+                <!-- Customer UPI (required) + shop pay info -->
                 <div class="form-section" style="background: rgba(244,167,185,0.12); border-radius: 16px; padding: 1.25rem;">
-                    <h2><i class="fas fa-university"></i> Pay with UPI</h2>
-                    <p style="color: var(--text-light); margin-bottom: 1rem;">
-                        Next page: pay to the <strong>shop UPI</strong>, then enter <strong>your UPI ID</strong>
-                        to confirm. That stops spam fake “paid” clicks.
+                    <h2><i class="fas fa-university"></i> UPI payment</h2>
+
+                    <p style="margin:0 0 0.5rem;font-weight:700;color:#5A3F4A;">Your UPI ID (required)</p>
+                    <p style="margin:0 0 0.6rem;font-size:0.9rem;color:#666;">
+                        Type the UPI ID you will pay from. This avoids spam fake payment confirmations.
                     </p>
-                    <div style="background:#fff;border-radius:12px;padding:1rem;border:1px solid rgba(232,122,150,0.25);">
+                    <textarea
+                        name="payer_upi_id"
+                        id="payer_upi_id"
+                        required
+                        rows="3"
+                        placeholder="Example:&#10;yourname@oksbi&#10;or 98xxxxxxxx@ybl"
+                        style="width:100%;box-sizing:border-box;padding:0.9rem 1rem;border-radius:14px;border:2px solid #a5d6a7;font-size:1.05rem;font-family:inherit;resize:vertical;line-height:1.4;"
+                    >{{ payer_upi_id|default:'' }}</textarea>
+
+                    <div style="background:#fff;border-radius:12px;padding:1rem;border:1px solid rgba(232,122,150,0.25);margin-top:1rem;">
                         <p style="margin:0.35rem 0;font-size:0.95rem;color:#666;">Shop UPI (you pay to this)</p>
                         <p style="margin:0 0 0.75rem;font-size:1.25rem;font-weight:800;color:#5A3F4A;word-break:break-all;" id="checkout-upi-id">
                             {{ upi_id }}
@@ -472,6 +482,11 @@ function copyCheckoutUpi() {
         prompt('Copy UPI ID:', text);
     }
 }
+// Normalize customer UPI textarea before submit
+document.querySelector('form') && document.querySelector('form').addEventListener('submit', function () {
+    var ta = document.getElementById('payer_upi_id');
+    if (ta) ta.value = (ta.value || '').replace(/\s+/g, '').toLowerCase();
+});
 </script>
 
 {% endblock %}

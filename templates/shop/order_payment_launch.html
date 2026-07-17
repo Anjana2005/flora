@@ -48,6 +48,9 @@
         <h1>Order {{ order_ref }}</h1>
         <p class="status">✓ Marked Paid · Stock updated</p>
         <p>Amount: <strong>₹{{ amount_str }}</strong></p>
+        {% if payer_upi_id %}
+        <p>Paid from UPI: <strong>{{ payer_upi_id }}</strong></p>
+        {% endif %}
         <p class="hint">
             Opening your UPI app… then WhatsApp with product &amp; order details.
             Complete the payment PIN, then tap <strong>Send</strong> in WhatsApp.
