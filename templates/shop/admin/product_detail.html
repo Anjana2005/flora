@@ -1,0 +1,502 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Product - Flora Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-container {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        gap: 2rem;
+        margin: 2rem 0;
+    }
+
+    .admin-sidebar {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        height: fit-content;
+        position: sticky;
+        top: 100px;
+    }
+
+    .admin-sidebar h3 {
+        margin-bottom: 1.5rem;
+        color: var(--text-dark);
+        border-bottom: 2px solid var(--primary-color);
+        padding-bottom: 0.5rem;
+    }
+
+    .admin-menu {
+        list-style: none;
+    }
+
+    .admin-menu li {
+        margin-bottom: 0.8rem;
+    }
+
+    .admin-menu a {
+        color: var(--text-light);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 0.8rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .admin-menu a:hover, .admin-menu a.active {
+        background: var(--bg-light);
+        color: var(--primary-color);
+    }
+
+    .admin-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    }
+
+    .content-header h1 {
+        font-size: 1.8rem;
+        color: var(--text-dark);
+        margin-bottom: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--text-dark);
+        font-weight: 600;
+    }
+
+    .form-group input, .form-group textarea, .form-group select {
+        width: 100%;
+        padding: 0.8rem;
+        border: 2px solid #E8E8E8;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-family: inherit;
+    }
+
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+
+    .form-group textarea {
+        resize: vertical;
+        min-height: 150px;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn-submit, .btn-cancel {
+        padding: 0.8rem 2rem;
+        border: none;
+        border-radius: 50px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-submit {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+    }
+
+    .btn-cancel {
+        background: #E8E8E8;
+        color: var(--text-dark);
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255,107,157,0.3);
+    }
+
+    .images-section {
+        margin-top: 3rem;
+        padding: 2rem;
+        background: var(--bg-light);
+        border-radius: 15px;
+    }
+
+    .images-section h2 {
+        color: var(--text-dark);
+        margin-bottom: 1.5rem;
+        font-size: 1.3rem;
+    }
+
+    .image-upload {
+        margin-bottom: 2rem;
+        padding: 2rem;
+        border: 2px dashed var(--primary-color);
+        border-radius: 8px;
+        text-align: center;
+        background: white;
+    }
+
+    .image-upload input[type="file"] {
+        display: none;
+    }
+
+    .image-upload label {
+        display: inline-block;
+        padding: 1rem 2rem;
+        background: var(--primary-color);
+        color: white;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+
+    .image-upload label:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .image-upload p {
+        color: var(--text-light);
+        margin: 1rem 0 0 0;
+    }
+
+    .images-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .image-item {
+        position: relative;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .image-item img {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+        display: block;
+    }
+
+    .image-item .image-actions {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0,0,0,0.7);
+        padding: 0.5rem;
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+
+    .image-item .btn-delete {
+        background: #E74C3C;
+        color: white;
+        border: none;
+        padding: 0.4rem 0.8rem;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+    }
+
+    .image-item .btn-delete:hover {
+        background: #C0392B;
+        transform: scale(1.05);
+    }
+
+    .no-images {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-light);
+    }
+
+    .sizes-section {
+        margin: 2rem 0;
+        padding: 1.5rem;
+        background: var(--bg-light);
+        border-radius: 8px;
+    }
+
+    .sizes-section h3 {
+        margin-top: 0;
+        color: var(--text-dark);
+        margin-bottom: 1rem;
+    }
+
+    .sizes-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+
+    .size-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 1rem;
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #eee;
+    }
+
+    .size-checkbox {
+        display: flex;
+        align-items: center;
+    }
+
+    .size-checkbox input {
+        margin-right: 0.5rem;
+    }
+
+    .size-checkbox label {
+        margin: 0;
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .size-quantity input {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        text-align: center;
+    }
+
+    .size-quantity input:disabled {
+        background: #f5f5f5;
+        color: #999;
+    }
+
+    @media (max-width: 768px) {
+        .admin-container {
+            grid-template-columns: 1fr;
+        }
+
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+
+        .images-grid {
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <h3><i class="fas fa-cog"></i> Admin Panel</h3>
+            <ul class="admin-menu">
+                <li><a href="{% url 'shop:admin_dashboard' %}"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="{% url 'shop:admin_products' %}" class="active"><i class="fas fa-box"></i> Manage Products</a></li>
+                <li><a href="{% url 'shop:admin_categories' %}"><i class="fas fa-tag"></i> Manage Categories</a></li>
+                <li><a href="{% url 'shop:admin_orders' %}"><i class="fas fa-receipt"></i> Manage Orders</a></li>
+                <li><a href="{% url 'shop:admin_contacts' %}"><i class="fas fa-envelope"></i> Manage Contacts</a></li>
+                <li><a href="{% url 'shop:admin_blogs' %}"><i class="fas fa-blog"></i> Manage Blogs</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="admin-content">
+            <div class="content-header">
+                <h1>Edit Product: {{ product.name }}</h1>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="name">Product Name</label>
+                        <input type="text" id="name" name="name" value="{{ product.name }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="price">Price</label>
+                        <input type="number" id="price" name="price" value="{{ product.price }}" step="0.01" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="discount_price">Discount Price (Optional)</label>
+                        <input type="number" id="discount_price" name="discount_price" value="{{ product.discount_price|default:'' }}" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="stock">Stock</label>
+                        <input type="number" id="stock" name="stock" value="{{ product.stock }}" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" required>{{ product.description }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="material">Material</label>
+                    <input type="text" id="material" name="material" value="{{ product.material|default:'' }}">
+                </div>
+
+                <!-- Sizes Management Section -->
+                <div class="sizes-section">
+                    <h3><i class="fas fa-rulers"></i> Size & Stock Management</h3>
+                    <div class="sizes-grid">
+                        {% for size_data in sizes %}
+                            <div class="size-item">
+                                <div class="size-checkbox">
+                                    <input type="checkbox" id="size_{{ size_data.value }}" name="sizes" value="{{ size_data.value }}" {% if size_data.product_size %}checked{% endif %}>
+                                    <label for="size_{{ size_data.value }}">{{ size_data.label }}</label>
+                                </div>
+                                <div class="size-quantity">
+                                    <input type="number" id="quantity_{{ size_data.value }}" name="quantity_{{ size_data.value }}" min="0" placeholder="Stock" value="{{ size_data.product_size.quantity|default:0 }}" {% if not size_data.product_size %}disabled{% endif %}>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="available">
+                            <input type="checkbox" id="available" name="available" {% if product.available %}checked{% endif %}>
+                            Available
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label for="featured">
+                            <input type="checkbox" id="featured" name="featured" {% if product.featured %}checked{% endif %}>
+                            Featured
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Save Changes</button>
+                    <a href="{% url 'shop:admin_products' %}" class="btn-cancel"><i class="fas fa-times"></i> Cancel</a>
+                </div>
+            </form>
+
+            <!-- Images Management Section -->
+            <div class="images-section">
+                <h2><i class="fas fa-images"></i> Product Images</h2>
+                
+                <div class="image-upload">
+                    <form id="image-upload-form" method="post" enctype="multipart/form-data" action="{% url 'shop:admin_product_add_image' id=product.id %}">
+                        {% csrf_token %}
+                        <label for="images"><i class="fas fa-cloud-upload-alt"></i> Click to Upload Images</label>
+                        <input type="file" id="images" name="images" multiple accept="image/*">
+                        <p>or drag and drop images here</p>
+                    </form>
+                </div>
+
+                {% if product.images.all %}
+                    <div class="images-grid">
+                        {% for image in product.images.all %}
+                            <div class="image-item">
+                                <img src="{{ image.image.url }}" alt="Product image">
+                                <div class="image-actions">
+                                    <form method="post" action="{% url 'shop:admin_product_delete_image' id=image.id %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-delete" onclick="return confirm('Delete this image?')"><i class="fas fa-trash"></i> Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="no-images">
+                        <p><i class="fas fa-image"></i> No images uploaded yet. Upload your first product image above.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Drag and drop functionality
+    const uploadForm = document.getElementById('image-upload-form');
+    const fileInput = document.getElementById('images');
+
+    if (uploadForm) {
+        uploadForm.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadForm.style.opacity = '0.6';
+        });
+
+        uploadForm.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadForm.style.opacity = '1';
+        });
+
+        uploadForm.addEventListener('drop', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            uploadForm.style.opacity = '1';
+            
+            const files = e.dataTransfer.files;
+            fileInput.files = files;
+            
+            // Auto-submit the form
+            uploadForm.submit();
+        });
+
+        // Auto-submit when files are selected
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                uploadForm.submit();
+            }
+        });
+    }
+</script>
+
+<script>
+    // Handle size checkbox and quantity input interaction
+    document.querySelectorAll('input[name="sizes"]').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            const sizeValue = this.value;
+            const quantityInput = document.getElementById(`quantity_${sizeValue}`);
+            
+            if (this.checked) {
+                quantityInput.disabled = false;
+                quantityInput.focus();
+            } else {
+                quantityInput.disabled = true;
+                quantityInput.value = '0';
+            }
+        });
+    });
+</script>
+{% endblock %}

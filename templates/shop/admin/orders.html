@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}Orders - Flora Admin{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div style="background:white;padding:1.5rem;border-radius:15px;box-shadow:0 5px 15px rgba(0,0,0,0.05);">
+        <h2>Orders</h2>
+        <table style="width:100%;border-collapse:collapse;margin-top:1rem;">
+            <thead>
+                <tr style="text-align:left;border-bottom:2px solid #eee;">
+                    <th>Order</th>
+                    <th>Customer</th>
+                    <th>Total Items</th>
+                    <th>Placed</th>
+                    <th>Paid</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for order in orders %}
+                <tr style="border-bottom:1px solid #f1f1f1;">
+                    <td>#{{ order.id }}</td>
+                    <td>{{ order.first_name }} {{ order.last_name }}<br><small>{{ order.email }}</small></td>
+                    <td>{{ order.items.count }}</td>
+                    <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+                    <td>{% if order.paid %}<span style="color:green;">Yes</span>{% else %}<span style="color:#d9534f;">No</span>{% endif %}</td>
+                    <td><a href="{% url 'shop:admin_order_detail' id=order.id %}">View</a></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">No orders yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div style="margin-top:1rem;">
+            {% if orders.has_other_pages %}
+                {% if orders.has_previous %}<a href="?page={{ orders.previous_page_number }}">Previous</a>{% endif %}
+                <span> Page {{ orders.number }} of {{ orders.paginator.num_pages }} </span>
+                {% if orders.has_next %}<a href="?page={{ orders.next_page_number }}">Next</a>{% endif %}
+            {% endif %}
+        </div>
+        <a href="{% url 'shop:admin_dashboard' %}" style="display:inline-block;margin-top:1rem;">Back to Dashboard</a>
+    </div>
+</div>
+{% endblock %}

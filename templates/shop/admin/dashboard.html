@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block title %}Admin Dashboard - Flora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-container {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        gap: 2rem;
+        margin: 2rem 0;
+    }
+
+    .admin-sidebar {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        height: fit-content;
+        position: sticky;
+        top: 100px;
+    }
+
+    .admin-sidebar h3 {
+        margin-bottom: 1.5rem;
+        color: var(--text-dark);
+        border-bottom: 2px solid var(--primary-color);
+        padding-bottom: 0.5rem;
+    }
+
+    .admin-menu {
+        list-style: none;
+    }
+
+    .admin-menu li {
+        margin-bottom: 0.8rem;
+    }
+
+    .admin-menu a {
+        color: var(--text-light);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 0.8rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .admin-menu a:hover, .admin-menu a.active {
+        background: var(--bg-light);
+        color: var(--primary-color);
+    }
+
+    .admin-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    }
+
+    .dashboard-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 2px solid #E8E8E8;
+    }
+
+    .dashboard-header h1 {
+        font-size: 2rem;
+        color: var(--text-dark);
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+    }
+
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.95rem;
+        opacity: 0.9;
+    }
+
+    @media (max-width: 768px) {
+        .admin-container {
+            grid-template-columns: 1fr;
+        }
+
+        .admin-sidebar {
+            position: static;
+        }
+
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <h3><i class="fas fa-cog"></i> Admin Panel</h3>
+            <ul class="admin-menu">
+                <li><a href="{% url 'shop:admin_dashboard' %}" class="active"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="{% url 'shop:admin_products' %}"><i class="fas fa-box"></i> Manage Products</a></li>
+                <li><a href="{% url 'shop:admin_categories' %}"><i class="fas fa-tag"></i> Manage Categories</a></li>
+                <li><a href="{% url 'shop:admin_orders' %}"><i class="fas fa-receipt"></i> Manage Orders</a></li>
+                <li><a href="{% url 'shop:admin_contacts' %}"><i class="fas fa-envelope"></i> Manage Contacts</a></li>
+                <li><a href="{% url 'shop:admin_blogs' %}"><i class="fas fa-blog"></i> Manage Blogs</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="admin-content">
+            <div class="dashboard-header">
+                <h1>Welcome, {{ user.first_name|default:user.username }}!</h1>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">{{ total_products }}</div>
+                    <div class="stat-label">Total Products</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ total_categories }}</div>
+                    <div class="stat-label">Categories</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ active_offers }}</div>
+                    <div class="stat-label">Active Offers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">{{ total_contacts }}</div>
+                    <div class="stat-label">Total Messages</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #FF6B9D, #FFA07A);">
+                    <div class="stat-number">{{ unread_contacts }}</div>
+                    <div class="stat-label">Unread Messages</div>
+                </div>
+            </div>
+
+            <div style="background: var(--bg-light); padding: 1.5rem; border-radius: 10px;">
+                <h3 style="color: var(--text-dark); margin-bottom: 1rem;">Quick Actions</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                    <a href="{% url 'shop:admin_products' %}" class="btn btn-primary" style="text-align: center;">View Products</a>
+                    <a href="{% url 'shop:admin_contacts' %}" class="btn btn-primary" style="text-align: center;">View Messages</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

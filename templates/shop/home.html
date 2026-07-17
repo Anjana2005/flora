@@ -1,0 +1,548 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Flora | Best Kids & Women Wear Shop in Thrissur{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+<style>
+    .bloom-hero {
+        max-width: 1240px;
+        margin: 1.4rem auto 0;
+        padding: 0 1.25rem;
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 1.2rem;
+        align-items: stretch;
+    }
+
+    .hero-copy {
+        background: linear-gradient(160deg, #FFF7FA 0%, #FDECF1 55%, #F7FBF5 100%);
+        border: 1px solid rgba(232,122,150,0.18);
+        border-radius: 32px;
+        padding: 2.4rem;
+        box-shadow: 0 18px 40px rgba(232,122,150,0.12);
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .hero-copy::before {
+        content: "✿";
+        position: absolute;
+        right: 1.2rem;
+        top: 1rem;
+        font-size: 4rem;
+        color: rgba(244,167,185,0.28);
+    }
+
+    .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.45rem;
+        background: white;
+        color: #D46A8A;
+        border: 1px solid rgba(232,122,150,0.2);
+        border-radius: 999px;
+        padding: 0.4rem 0.85rem;
+        font-size: 0.82rem;
+        font-weight: 800;
+        width: fit-content;
+        margin-bottom: 1rem;
+    }
+
+    .hero-copy h1 {
+        font-size: clamp(2.1rem, 4vw, 3.4rem);
+        line-height: 1.12;
+        margin-bottom: 0.9rem;
+        color: #5A3F4A;
+    }
+
+    .hero-copy p {
+        color: #8B7E85;
+        font-size: 1.05rem;
+        max-width: 34rem;
+        margin-bottom: 1.4rem;
+    }
+
+    .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-bottom: 1.4rem;
+    }
+
+    .hero-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.7rem;
+    }
+
+    .hero-stats div {
+        background: rgba(255,255,255,0.78);
+        border: 1px solid rgba(232,122,150,0.14);
+        border-radius: 18px;
+        padding: 0.85rem;
+    }
+
+    .hero-stats strong {
+        display: block;
+        font-size: 1.15rem;
+        color: #E87A96;
+        font-family: 'Playfair Display', serif;
+    }
+
+    .hero-stats span {
+        color: #8B7E85;
+        font-size: 0.84rem;
+        font-weight: 700;
+    }
+
+    .hero-visual {
+        border-radius: 32px;
+        overflow: hidden;
+        border: 1px solid rgba(232,122,150,0.18);
+        box-shadow: 0 18px 40px rgba(232,122,150,0.12);
+        min-height: 420px;
+        background: #fff;
+    }
+
+    .hero-visual .swiper,
+    .hero-visual .swiper-slide,
+    .hero-visual img {
+        height: 100%;
+        min-height: 420px;
+    }
+
+    .hero-visual img {
+        width: 100%;
+        object-fit: cover;
+    }
+
+    .offer-strip {
+        max-width: 1240px;
+        margin: 1.2rem auto 0;
+        padding: 0 1.25rem;
+    }
+
+    .offer-card {
+        position: relative;
+        border-radius: 28px;
+        overflow: hidden;
+        border: 1px solid rgba(232,122,150,0.16);
+        box-shadow: 0 16px 36px rgba(232,122,150,0.12);
+        background: white;
+        animation: offer-card-float 5s ease-in-out both;
+        will-change: transform, opacity;
+    }
+
+    .offer-card img {
+        width: 100%;
+        max-height: 220px;
+        object-fit: cover;
+    }
+
+    @keyframes offer-card-float {
+        0% {
+            opacity: 0;
+            transform: translateY(18px) scale(0.98);
+        }
+        15% {
+            opacity: 1;
+            transform: translateY(-4px) scale(1.01);
+        }
+        35% {
+            transform: translateY(6px) scale(0.995);
+        }
+        60% {
+            transform: translateY(-2px) scale(1);
+        }
+        100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    .close-offer {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 36px;
+        height: 36px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.92);
+        color: #D46A8A;
+        font-size: 1.3rem;
+        cursor: pointer;
+    }
+
+    .section-wrap {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 2.4rem 1.25rem 0.5rem;
+    }
+
+    .section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 1rem;
+        margin-bottom: 1.2rem;
+    }
+
+    .section-head h2 {
+        font-size: clamp(1.6rem, 3vw, 2.2rem);
+    }
+
+    .section-head p {
+        color: #8B7E85;
+        margin-top: 0.25rem;
+    }
+
+    .section-link {
+        color: #D46A8A;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+
+    .category-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem;
+    }
+
+    .category-tile {
+        position: relative;
+        border-radius: 28px;
+        min-height: 180px;
+        padding: 1.5rem;
+        overflow: hidden;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: end;
+        box-shadow: 0 16px 36px rgba(232,122,150,0.12);
+    }
+
+    .category-tile.women {
+        background: linear-gradient(145deg, #E87A96, #F4A7B9 55%, #F7C9D4);
+    }
+
+    .category-tile.kids {
+        background: linear-gradient(145deg, #8E5A6B, #A8C5A0 70%);
+    }
+
+    .category-tile h3 {
+        color: white;
+        font-size: 1.7rem;
+        margin-bottom: 0.35rem;
+    }
+
+    .category-tile span {
+        opacity: 0.95;
+        font-weight: 700;
+    }
+
+    .story-band {
+        max-width: 1240px;
+        margin: 2rem auto 0;
+        padding: 0 1.25rem;
+    }
+
+    .story-card {
+        border-radius: 32px;
+        padding: 2rem;
+        background: linear-gradient(135deg, rgba(244,167,185,0.18), rgba(168,197,160,0.16));
+        border: 1px solid rgba(232,122,150,0.14);
+        display: grid;
+        grid-template-columns: 1.3fr 0.7fr;
+        gap: 1.2rem;
+        align-items: center;
+    }
+
+    .story-card h2 {
+        font-size: clamp(1.6rem, 3vw, 2.2rem);
+        margin-bottom: 0.7rem;
+    }
+
+    .story-card p {
+        color: #6B5E64;
+        margin-bottom: 1rem;
+    }
+
+    .story-points {
+        display: grid;
+        gap: 0.55rem;
+    }
+
+    .story-points div {
+        background: rgba(255,255,255,0.8);
+        border-radius: 16px;
+        padding: 0.85rem 1rem;
+        font-weight: 700;
+        color: #5A3F4A;
+        border: 1px solid rgba(232,122,150,0.12);
+    }
+
+    .video-carousel-section {
+        max-width: 1240px;
+        margin: 2rem auto 0;
+        padding: 0 1.25rem 1rem;
+    }
+
+    .video-carousel {
+        position: relative;
+        border-radius: 28px;
+        overflow: hidden;
+        border: 1px solid rgba(232,122,150,0.14);
+        background: white;
+        box-shadow: 0 16px 36px rgba(232,122,150,0.10);
+    }
+
+    .video-track {
+        display: flex;
+        gap: 0.8rem;
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        padding: 0.9rem;
+    }
+
+    .video-track video {
+        width: min(280px, 70vw);
+        height: 360px;
+        object-fit: cover;
+        border-radius: 20px;
+        background: #FDECF1;
+        flex: 0 0 auto;
+    }
+
+    .nav-arrow {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 2;
+        width: 42px;
+        height: 42px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.92);
+        color: #D46A8A;
+        box-shadow: 0 8px 18px rgba(90,63,74,0.12);
+        cursor: pointer;
+    }
+
+    .nav-arrow.left { left: 12px; }
+    .nav-arrow.right { right: 12px; }
+
+    @media (max-width: 980px) {
+        .bloom-hero,
+        .story-card {
+            grid-template-columns: 1fr;
+        }
+
+        .products-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .hero-visual,
+        .hero-visual .swiper,
+        .hero-visual .swiper-slide,
+        .hero-visual img {
+            min-height: 320px;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .bloom-hero {
+            padding: 0 0.9rem;
+            margin-top: 0.9rem;
+        }
+
+        .hero-copy {
+            padding: 1.25rem;
+        }
+
+        .hero-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .hero-actions .btn {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        .hero-stats { grid-template-columns: 1fr; }
+        .category-row { grid-template-columns: 1fr; }
+        .products-grid { grid-template-columns: 1fr; }
+        .section-wrap {
+            padding: 1.8rem 0.9rem 0.5rem;
+        }
+        .section-head { flex-direction: column; align-items: start; }
+        .story-band { padding: 0 0.9rem; }
+        .story-card { padding: 1.2rem; }
+        .video-carousel-section { padding: 0 0.9rem 1rem; }
+        .video-track video {
+            width: min(260px, 78vw);
+            height: 300px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="bloom-hero">
+    <div class="hero-copy">
+        <div class="eyebrow">✿ Soft pink floral boutique</div>
+        <h1>Best Kids & Women Wear Shop in Thrissur</h1>
+        <p>Flora is a trusted shop in Thrissur for elegant women’s wear, stylish kids’ fashion, festive outfits, and everyday comfort. Shop the prettiest selections for every celebration and everyday moment.</p>
+        <div class="hero-actions">
+            <a href="{% url 'shop:product_list' %}" class="btn btn-primary">Shop Collection</a>
+            <a href="{% url 'shop:product_list' %}?type=kids" class="btn btn-secondary">Kids Wear</a>
+        </div>
+        <div class="hero-stats">
+            <div>
+                <strong>Women</strong>
+                <span>Elegant wear for every occasion</span>
+            </div>
+            <div>
+                <strong>Kids</strong>
+                <span>Stylish sizes 16 to 30</span>
+            </div>
+            <div>
+                <strong>Thrissur</strong>
+                <span>Trusted local boutique</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="hero-visual">
+        <div class="hero-carousel swiper">
+            <div class="swiper-wrapper">
+                <div class="swiper-slide">
+                    <img src="{% static 'images/happycustomers.png' %}" alt="Flora Fashion Collection">
+                </div>
+                <div class="swiper-slide">
+                    <img src="{% static 'images/customers1.jpeg' %}" alt="Flora Women's Wear">
+                </div>
+                <div class="swiper-slide">
+                    <img src="{% static 'images/customers2.jpeg' %}" alt="Flora Kids Fashion">
+                </div>
+            </div>
+            <div class="swiper-pagination"></div>
+        </div>
+    </div>
+</section>
+
+{% if offer_sale and offer_sale.image %}
+<div class="offer-strip">
+    <div class="offer-card" id="offerBanner">
+        <img src="{{ offer_sale.image.url }}" alt="Current offer">
+        <button class="close-offer" type="button" aria-label="Close offer">&times;</button>
+    </div>
+</div>
+{% endif %}
+
+<section class="section-wrap">
+    <div class="section-head">
+        <div>
+            <h2>Shop by mood</h2>
+            <p>Choose a soft collection for her or the little ones</p>
+        </div>
+    </div>
+    <div class="category-row">
+        <a href="{% url 'shop:product_list' %}?type=women" class="category-tile women">
+            <h3>Women</h3>
+            <span>Kurtis, sets & graceful daily wear</span>
+        </a>
+        <a href="{% url 'shop:product_list' %}?type=kids" class="category-tile kids">
+            <h3>Kids</h3>
+            <span>Playful outfits from size 16 to 30</span>
+        </a>
+    </div>
+</section>
+
+{% if featured_products %}
+<section class="section-wrap">
+    <div class="section-head">
+        <div>
+            <h2>Featured blooms</h2>
+            <p>Handpicked favorites with soft pink charm</p>
+        </div>
+        <a class="section-link" href="{% url 'shop:product_list' %}">View all →</a>
+    </div>
+    <div class="products-grid">
+        {% for product in featured_products %}
+        {% include "partials/product_card.html" %}
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+{% if new_arrivals %}
+<section class="section-wrap">
+    <div class="section-head">
+        <div>
+            <h2>New arrivals</h2>
+            <p>Fresh styles added for the new season</p>
+        </div>
+        <a class="section-link" href="{% url 'shop:product_list' %}">Shop new →</a>
+    </div>
+    <div class="products-grid">
+        {% for product in new_arrivals %}
+        {% include "partials/product_card.html" %}
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<section class="story-band">
+    <div class="story-card">
+        <div>
+            <h2>Flora – a trusted fashion shop for women and kids in Thrissur</h2>
+            <p>Flora is built around comfort, color, and confidence. From everyday kurtis to kids’ celebration wear, every piece is chosen to feel light, look lovely, and bring joy to every occasion.</p>
+            <a href="{% url 'shop:about' %}" class="btn btn-primary">Our story</a>
+        </div>
+        <div class="story-points">
+            <div>✿ Soft pink floral styling</div>
+            <div>✿ Women sizes M to 3XL</div>
+            <div>✿ Kids sizes 16 to 30</div>
+            <div>✿ Easy WhatsApp ordering</div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+<script>
+    new Swiper('.hero-carousel', {
+        loop: true,
+        autoplay: { delay: 4200, disableOnInteraction: false },
+        effect: 'fade',
+        fadeEffect: { crossFade: true },
+        speed: 900,
+        pagination: { el: '.swiper-pagination', clickable: true }
+    });
+
+    const offerBanner = document.getElementById('offerBanner');
+    if (offerBanner) {
+        const closeBtn = offerBanner.querySelector('.close-offer');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function () {
+                offerBanner.style.display = 'none';
+            });
+        }
+    }
+
+    function slide(direction) {
+        const track = document.getElementById('videoTrack');
+        if (!track) return;
+        track.scrollBy({ left: direction * 300, behavior: 'smooth' });
+    }
+</script>
+{% endblock %}

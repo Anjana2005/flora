@@ -1,0 +1,114 @@
+{% extends "shop/admin/dashboard.html" %}
+
+{% block title %}Blog Details - Flora Admin{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <h3><i class="fas fa-cog"></i> Admin Panel</h3>
+            <ul class="admin-menu">
+                <li><a href="{% url 'shop:admin_dashboard' %}"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="{% url 'shop:admin_products' %}"><i class="fas fa-box"></i> Manage Products</a></li>
+                <li><a href="{% url 'shop:admin_categories' %}"><i class="fas fa-tag"></i> Manage Categories</a></li>
+                <li><a href="{% url 'shop:admin_orders' %}"><i class="fas fa-receipt"></i> Manage Orders</a></li>
+                <li><a href="{% url 'shop:admin_contacts' %}"><i class="fas fa-envelope"></i> Manage Contacts</a></li>
+                <li><a href="{% url 'shop:admin_blogs' %}" class="active"><i class="fas fa-blog"></i> Manage Blogs</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="admin-content">
+            <div class="dashboard-header">
+                <div>
+                    <h1>{{ blog.title }}</h1>
+                    <p style="color: var(--text-light); margin: 10px 0 0 0;">
+                        <i class="fas fa-user"></i> By {{ blog.author.get_full_name|default:blog.author.username }} 
+                        | <i class="fas fa-calendar"></i> {{ blog.created_at|date:"M d, Y \a\t H:i" }}
+                    </p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <a href="{% url 'shop:admin_blog_edit' blog.id %}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 5px;">
+                        <i class="fas fa-edit"></i> Edit
+                    </a>
+                    <a href="{% url 'shop:admin_blog_delete' blog.id %}" class="btn" style="display: inline-flex; align-items: center; gap: 5px; background-color: #E74C3C; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none;">
+                        <i class="fas fa-trash"></i> Delete
+                    </a>
+                </div>
+            </div>
+
+            {% if messages %}
+                <div style="margin-bottom: 20px;">
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }}" style="padding: 12px; margin-bottom: 10px; border-radius: 5px; {% if message.tags == 'error' %}background-color: #f8d7da; color: #721c24;{% else %}background-color: #d4edda; color: #155724;{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Blog Content -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+                <!-- Main Content -->
+                <div>
+                    {% if blog.image %}
+                        <img src="{{ blog.image.url }}" alt="{{ blog.title }}" style="width: 100%; height: 400px; object-fit: cover; border-radius: 10px; margin-bottom: 20px;">
+                    {% else %}
+                        <div style="width: 100%; height: 400px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: white; margin-bottom: 20px;">
+                            <i class="fas fa-image" style="font-size: 100px; opacity: 0.3;"></i>
+                        </div>
+                    {% endif %}
+
+                    <div style="background: white; padding: 20px; border-radius: 10px; border-left: 4px solid var(--primary-color);">
+                        <h3 style="color: var(--text-dark); margin-bottom: 15px;">Blog Content</h3>
+                        <p style="color: var(--text-dark); line-height: 1.8; white-space: pre-wrap;">{{ blog.description }}</p>
+                    </div>
+                </div>
+
+                <!-- Sidebar Info -->
+                <div>
+                    <div style="background: var(--bg-light); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                        <h3 style="color: var(--text-dark); margin-bottom: 15px;">
+                            <i class="fas fa-info-circle"></i> Blog Information
+                        </h3>
+
+                        <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #E0E0E0;">
+                            <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 5px;">Author</p>
+                            <p style="color: var(--text-dark); font-weight: 600;">{{ blog.author.get_full_name|default:blog.author.username }}</p>
+                        </div>
+
+                        <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #E0E0E0;">
+                            <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 5px;">Author Email</p>
+                            <p style="color: var(--text-dark); font-weight: 600;">{{ blog.author.email }}</p>
+                        </div>
+
+                        <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #E0E0E0;">
+                            <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 5px;">Created</p>
+                            <p style="color: var(--text-dark); font-weight: 600;">{{ blog.created_at|date:"M d, Y H:i" }}</p>
+                        </div>
+
+                        <div style="margin-bottom: 15px;">
+                            <p style="color: var(--text-light); font-size: 0.9rem; margin-bottom: 5px;">Last Updated</p>
+                            <p style="color: var(--text-dark); font-weight: 600;">{{ blog.updated_at|date:"M d, Y H:i" }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div style="background: white; padding: 20px; border-radius: 10px; border-left: 4px solid var(--primary-color);">
+                        <h3 style="color: var(--text-dark); margin-bottom: 15px;">
+                            <i class="fas fa-tools"></i> Quick Actions
+                        </h3>
+                        <a href="{% url 'shop:admin_blogs' %}" style="display: block; padding: 10px; margin-bottom: 10px; background: var(--primary-color); color: white; text-decoration: none; border-radius: 5px; text-align: center; transition: background 0.2s;" onmouseover="this.style.background='var(--secondary-color)';" onmouseout="this.style.background='var(--primary-color)';">
+                            <i class="fas fa-list"></i> Back to Blogs
+                        </a>
+                        <a href="{% url 'shop:blog_detail' blog.id %}" style="display: block; padding: 10px; background: #9B59B6; color: white; text-decoration: none; border-radius: 5px; text-align: center; transition: background 0.2s;" onmouseover="this.style.background='#8E44AD';" onmouseout="this.style.background='#9B59B6';" target="_blank">
+                            <i class="fas fa-external-link-alt"></i> View Public
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

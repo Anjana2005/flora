@@ -1,0 +1,430 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Profile - Flora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-page {
+        min-height: 100vh;
+        background: linear-gradient(160deg, #fff5f8 0%, #fce4f5 40%, #f3e8ff 100%);
+        padding: 3rem 0 5rem;
+    }
+
+    .profile-container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 2rem;
+    }
+
+    .profile-hero {
+        background: linear-gradient(135deg, #f56fd3 0%, #b44b9a 60%, #7c3aed 100%);
+        border-radius: 28px;
+        padding: 2.5rem 3rem;
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        margin-bottom: 2.5rem;
+        box-shadow: 0 20px 60px rgba(180, 75, 154, 0.35);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .profile-hero::before {
+        content: '';
+        position: absolute;
+        top: -60px; right: -60px;
+        width: 220px; height: 220px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.08);
+    }
+
+    .profile-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -80px; left: 30%;
+        width: 300px; height: 300px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.05);
+    }
+
+    .avatar-wrap {
+        flex-shrink: 0;
+        width: 100px; height: 100px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 3px solid rgba(255,255,255,0.5);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+        font-size: 2.8rem;
+        color: #fff;
+        position: relative;
+        z-index: 1;
+    }
+
+    .profile-info {
+        position: relative;
+        z-index: 1;
+    }
+
+    .profile-info h1 {
+        font-family: 'Playfair Display', serif;
+        font-size: 2rem;
+        color: #fff;
+        margin-bottom: 0.25rem;
+    }
+
+    .profile-info .meta {
+        color: rgba(255,255,255,0.8);
+        font-size: 0.9rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.3rem;
+        margin-bottom: 1rem;
+    }
+
+    .profile-info .meta span {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .profile-badges {
+        display: flex;
+        gap: 0.6rem;
+        flex-wrap: wrap;
+    }
+
+    .badge {
+        padding: 0.3rem 0.85rem;
+        border-radius: 50px;
+        font-size: 0.78rem;
+        font-weight: 600;
+    }
+
+    .badge-member {
+        background: rgba(255,255,255,0.2);
+        color: #fff;
+        border: 1px solid rgba(255,255,255,0.35);
+    }
+
+    .badge-orders { background: #FFA07A; color: #fff; }
+
+    .stats-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.2rem;
+        margin-bottom: 2.5rem;
+    }
+
+    .stat-card {
+        background: #fff;
+        border-radius: 18px;
+        padding: 1.5rem 1.8rem;
+        display: flex;
+        align-items: center;
+        gap: 1.2rem;
+        box-shadow: 0 4px 20px rgba(180, 75, 154, 0.1);
+        border: 1px solid rgba(245, 111, 211, 0.12);
+        transition: transform 0.25s, box-shadow 0.25s;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px rgba(180, 75, 154, 0.18);
+    }
+
+    .stat-icon {
+        width: 52px; height: 52px;
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+
+    .stat-icon.pink   { background: #fce4f5; color: #b44b9a; }
+    .stat-icon.orange { background: #fff3e8; color: #e07020; }
+    .stat-icon.green  { background: #e8f5e9; color: #2e7d32; }
+
+    .stat-info .value {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.7rem;
+        font-weight: 700;
+        color: #2C3E50;
+        line-height: 1;
+    }
+
+    .stat-info .label {
+        font-size: 0.8rem;
+        color: #7F8C8D;
+        margin-top: 0.2rem;
+    }
+
+    .section-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.6rem;
+        color: #2C3E50;
+        margin-bottom: 1.4rem;
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+    }
+
+    .section-title i { color: #b44b9a; font-size: 1.2rem; }
+
+    .orders-card {
+        background: #fff;
+        border-radius: 22px;
+        overflow: hidden;
+        box-shadow: 0 4px 30px rgba(180, 75, 154, 0.1);
+        border: 1px solid rgba(245, 111, 211, 0.12);
+    }
+
+    .orders-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .orders-table thead th {
+        background: linear-gradient(135deg, #f56fd3, #b44b9a);
+        color: #fff;
+        padding: 1rem 1.4rem;
+        text-align: left;
+        font-size: 0.82rem;
+        font-weight: 600;
+        letter-spacing: 0.8px;
+        text-transform: uppercase;
+    }
+
+    .orders-table tbody tr {
+        border-bottom: 1px solid #fce4f5;
+        transition: background 0.2s;
+    }
+
+    .orders-table tbody tr:last-child { border-bottom: none; }
+    .orders-table tbody tr:hover { background: #fff5fb; }
+
+    .orders-table td {
+        padding: 1.1rem 1.4rem;
+        font-size: 0.9rem;
+        color: #2C3E50;
+        vertical-align: middle;
+    }
+
+    .order-id {
+        font-weight: 700;
+        color: #b44b9a;
+        font-family: 'Courier New', monospace;
+    }
+
+    .items-preview { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+
+    .item-chip {
+        background: #fce4f5;
+        color: #b44b9a;
+        border-radius: 8px;
+        padding: 0.22rem 0.6rem;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .status-pill {
+        padding: 0.28rem 0.85rem;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+
+    .status-pill::before {
+        content: '';
+        width: 7px; height: 7px;
+        border-radius: 50%;
+    }
+
+    .status-paid    { background: #e8f5e9; color: #2e7d32; }
+    .status-paid::before    { background: #4caf50; }
+    .status-unpaid  { background: #fff8e1; color: #b8860b; }
+    .status-unpaid::before  { background: #f0a500; }
+
+    .empty-orders {
+        text-align: center;
+        padding: 5rem 2rem;
+    }
+
+    .empty-orders .empty-icon {
+        font-size: 4.5rem;
+        color: #f0b8e4;
+        margin-bottom: 1.2rem;
+        display: block;
+    }
+
+    .empty-orders h3 {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.5rem;
+        color: #2C3E50;
+        margin-bottom: 0.6rem;
+    }
+
+    .empty-orders p {
+        color: #7F8C8D;
+        margin-bottom: 1.8rem;
+        font-size: 0.95rem;
+    }
+
+    .btn-shop {
+        background: linear-gradient(135deg, #f56fd3, #b44b9a);
+        color: #fff;
+        border-radius: 50px;
+        padding: 0.8rem 2.2rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s;
+    }
+
+    .btn-shop:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(180, 75, 154, 0.35);
+        color: #fff;
+    }
+
+    @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .profile-hero { animation: fadeUp 0.5s ease both; }
+    .stats-row    { animation: fadeUp 0.5s 0.1s ease both; }
+    .orders-card  { animation: fadeUp 0.5s 0.2s ease both; }
+
+    @media (max-width: 768px) {
+        .profile-hero { flex-direction: column; text-align: center; padding: 2rem 1.5rem; }
+        .profile-badges { justify-content: center; }
+        .stats-row { grid-template-columns: 1fr; }
+        .orders-table thead th:nth-child(3),
+        .orders-table td:nth-child(3) { display: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-page">
+    <div class="profile-container">
+
+        <!-- Hero -->
+        <div class="profile-hero">
+            <div class="avatar-wrap">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="profile-info">
+                <h1>{{ user.get_full_name|default:user.username }}</h1>
+                <div class="meta">
+                    <span><i class="fas fa-envelope"></i> {{ user.email }}</span>
+                    <span><i class="fas fa-calendar-alt"></i> Member since {{ user.date_joined|date:"F Y" }}</span>
+                </div>
+                <div class="profile-badges">
+                    <span class="badge badge-member"><i class="fas fa-crown"></i>&nbsp;Flora Member</span>
+                    <span class="badge badge-orders">{{ orders|length }} Order{{ orders|length|pluralize }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-card">
+                <div class="stat-icon pink"><i class="fas fa-box"></i></div>
+                <div class="stat-info">
+                    <div class="value">{{ orders|length }}</div>
+                    <div class="label">Total Orders</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon orange"><i class="fas fa-rupee-sign"></i></div>
+                <div class="stat-info">
+                    <div class="value">₹{{ total_spent|floatformat:0 }}</div>
+                    <div class="label">Total Spent</div>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+                <div class="stat-info">
+                    <div class="value">{{ paid_count }}</div>
+                    <div class="label">Paid Orders</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders -->
+        <h2 class="section-title">
+            <i class="fas fa-shopping-bag"></i> My Orders
+        </h2>
+
+        <div class="orders-card">
+            {% if orders %}
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Date</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Payment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td><span class="order-id">#{{ order.id }}</span></td>
+                        <td>
+                            <i class="fas fa-calendar-alt" style="color:#b44b9a;margin-right:5px;"></i>
+                            {{ order.created_at|date:"d M Y" }}
+                        </td>
+                        <td>
+                            <div class="items-preview">
+                                {% for item in order.items.all %}
+                                    <span class="item-chip">
+                                        {{ item.product.name|truncatechars:20 }}
+                                        {% if item.quantity > 1 %}&times;{{ item.quantity }}{% endif %}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td>
+                            <strong style="color:#b44b9a;">₹{{ order.total|floatformat:2 }}</strong>
+                        </td>
+                        <td>
+                            {% if order.paid %}
+                                <span class="status-pill status-paid">Paid</span>
+                            {% else %}
+                                <span class="status-pill status-unpaid">Pending</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% else %}
+            <div class="empty-orders">
+                <span class="empty-icon"><i class="fas fa-shopping-bag"></i></span>
+                <h3>No orders yet</h3>
+                <p>Looks like you haven't placed any orders.<br>Start shopping and find something you'll love!</p>
+                <a href="{% url 'shop:product_list' %}" class="btn-shop">
+                    <i class="fas fa-store"></i> Browse Collection
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

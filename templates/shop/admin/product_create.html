@@ -1,0 +1,476 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Product - Flora Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-container {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        gap: 2rem;
+        margin: 2rem 0;
+    }
+
+    .admin-sidebar {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        height: fit-content;
+        position: sticky;
+        top: 100px;
+    }
+
+    .admin-sidebar h3 {
+        margin-bottom: 1.5rem;
+        color: var(--text-dark);
+        border-bottom: 2px solid var(--primary-color);
+        padding-bottom: 0.5rem;
+    }
+
+    .admin-menu {
+        list-style: none;
+    }
+
+    .admin-menu li {
+        margin-bottom: 0.8rem;
+    }
+
+    .admin-menu a {
+        color: var(--text-light);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        padding: 0.8rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+
+    .admin-menu a:hover, .admin-menu a.active {
+        background: var(--bg-light);
+        color: var(--primary-color);
+    }
+
+    .admin-content {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    }
+
+    .admin-header {
+        margin-bottom: 2rem;
+        border-bottom: 2px solid var(--bg-light);
+        padding-bottom: 1rem;
+    }
+
+    .admin-header h2 {
+        margin: 0;
+        color: var(--text-dark);
+    }
+
+    .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        font-weight: 600;
+        color: var(--text-dark);
+        margin-bottom: 0.5rem;
+        font-size: 0.95rem;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 0.8rem;
+        border: 2px solid #eee;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-family: inherit;
+        transition: all 0.3s ease;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(255, 181, 54, 0.1);
+    }
+
+    .form-group textarea {
+        resize: vertical;
+        min-height: 120px;
+        grid-column: 1 / -1;
+    }
+
+    .form-group.full-width {
+        grid-column: 1 / -1;
+    }
+
+    .form-group input[type="checkbox"] {
+        width: auto;
+        margin-right: 0.5rem;
+    }
+
+    .checkbox-group {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .checkbox-group label {
+        margin: 0;
+    }
+
+    .form-group input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+    }
+
+    .sizes-section {
+        grid-column: 1 / -1;
+        padding: 1.5rem;
+        background: var(--bg-light);
+        border-radius: 8px;
+    }
+
+    .sizes-section h3 {
+        margin-top: 0;
+        color: var(--text-dark);
+        margin-bottom: 1rem;
+    }
+
+    .sizes-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+
+    .size-item {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 1rem;
+        background: white;
+        border-radius: 8px;
+        border: 1px solid #eee;
+    }
+
+    .size-checkbox {
+        display: flex;
+        align-items: center;
+    }
+
+    .size-checkbox input {
+        margin-right: 0.5rem;
+    }
+
+    .size-checkbox label {
+        margin: 0;
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .size-quantity input {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        text-align: center;
+    }
+
+    .size-quantity input:disabled {
+        background: #f5f5f5;
+        color: #999;
+    }
+
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+
+    .btn {
+        padding: 0.8rem 2rem;
+        border: none;
+        border-radius: 50px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .btn-secondary {
+        background: #E8E8E8;
+        color: var(--text-dark);
+    }
+
+    .btn-secondary:hover {
+        background: #d0d0d0;
+    }
+
+    .required {
+        color: #E74C3C;
+    }
+
+    @media (max-width: 768px) {
+        .admin-container {
+            grid-template-columns: 1fr;
+        }
+
+        .form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .form-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <h3><i class="fas fa-cog"></i> Admin Panel</h3>
+            <ul class="admin-menu">
+                <li><a href="{% url 'shop:admin_dashboard' %}"><i class="fas fa-chart-line"></i> Dashboard</a></li>
+                <li><a href="{% url 'shop:admin_products' %}" class="active"><i class="fas fa-box"></i> Manage Products</a></li>
+                <li><a href="{% url 'shop:admin_categories' %}"><i class="fas fa-tag"></i> Manage Categories</a></li>
+                <li><a href="{% url 'shop:admin_orders' %}"><i class="fas fa-receipt"></i> Manage Orders</a></li>
+                <li><a href="{% url 'shop:admin_contacts' %}"><i class="fas fa-envelope"></i> Manage Contacts</a></li>
+                <li><a href="{% url 'shop:admin_blogs' %}"><i class="fas fa-blog"></i> Manage Blogs</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="admin-content">
+            <div class="admin-header">
+                <h2><i class="fas fa-plus"></i> Add New Product</h2>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}" style="padding: 1rem; border-radius: 8px; margin-bottom: 1rem; {% if 'error' in message.tags %}background: #F8D7DA; color: #721C24;{% else %}background: #D4EDDA; color: #155724;{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" class="form-grid">
+                {% csrf_token %}
+
+                <!-- Basic Information -->
+                <div class="form-group">
+                    <label for="name">Product Name <span class="required">*</span></label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="category">Category <span class="required">*</span></label>
+                    <select id="category" name="category" required>
+                        <option value="">-- Select Category --</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="price">Price <span class="required">*</span></label>
+                    <input type="number" id="price" name="price" step="0.01" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="discount_price">Discount Price (Optional)</label>
+                    <input type="number" id="discount_price" name="discount_price" step="0.01">
+                </div>
+
+                <div class="form-group">
+                    <label for="stock">Stock Quantity <span class="required">*</span></label>
+                    <input type="number" id="stock" name="stock" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="product_type">Product Type <span class="required">*</span></label>
+                    <select id="product_type" name="product_type" required>
+                        {% for value, label in product_types %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="style">Style <span class="required">*</span></label>
+                    <select id="style" name="style" required>
+                        {% for value, label in styles %}
+                            <option value="{{ value }}">{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="material">Material</label>
+                    <input type="text" id="material" name="material" placeholder="e.g., Cotton, Silk">
+                </div>
+
+                <!-- Description -->
+                <div class="form-group full-width">
+                    <label for="description">Description <span class="required">*</span></label>
+                    <textarea id="description" name="description" required></textarea>
+                </div>
+
+                <!-- Care Instructions -->
+                <div class="form-group full-width">
+                    <label for="care_instructions">Care Instructions</label>
+                    <textarea id="care_instructions" name="care_instructions" placeholder="e.g., Wash in cold water, Dry clean only"></textarea>
+                </div>
+
+                <!-- Sizes with Stock Management -->
+                <div class="sizes-section">
+                    <h3><i class="fas fa-rulers"></i> Available Sizes & Stock</h3>
+                    <p style="color: var(--text-light); margin-bottom: 1rem; font-size: 0.9rem;">
+                        Women: Medium, Large, XL, 2XL, 3XL · Kids: 16 (1 Year) to 30
+                    </p>
+                    <div class="sizes-grid" id="women-sizes">
+                        {% for value, label in women_sizes %}
+                            <div class="size-item">
+                                <div class="size-checkbox">
+                                    <input type="checkbox" id="size_{{ value }}" name="sizes" value="{{ value }}" class="women-size-input">
+                                    <label for="size_{{ value }}">{{ label }}</label>
+                                </div>
+                                <div class="size-quantity">
+                                    <input type="number" id="quantity_{{ value }}" name="quantity_{{ value }}" min="0" placeholder="Stock" disabled class="women-size-qty">
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    <div class="sizes-grid" id="kids-sizes" style="display:none;">
+                        {% for value, label in kids_sizes %}
+                            <div class="size-item">
+                                <div class="size-checkbox">
+                                    <input type="checkbox" id="size_{{ value }}" name="sizes" value="{{ value }}" class="kids-size-input" disabled>
+                                    <label for="size_{{ value }}">{{ label }}</label>
+                                </div>
+                                <div class="size-quantity">
+                                    <input type="number" id="quantity_{{ value }}" name="quantity_{{ value }}" min="0" placeholder="Stock" disabled class="kids-size-qty">
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Product Images -->
+                <div class="form-group full-width">
+                    <label for="images">Product Images</label>
+                    <input type="file" id="images" name="images" multiple accept="image/*" style="padding: 1rem; border: 2px dashed var(--primary-color); border-radius: 8px;">
+                    <small style="color: var(--text-light); margin-top: 0.5rem; display: block;">You can upload multiple images. You'll be able to manage them after creating the product.</small>
+                </div>
+
+                <!-- Checkboxes -->
+                <div class="form-group full-width checkbox-group">
+                    <div>
+                        <input type="checkbox" id="available" name="available" checked>
+                        <label for="available">Available for Sale</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="featured" name="featured">
+                        <label for="featured">Featured Product</label>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="form-group full-width form-actions">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Create Product</button>
+                    <a href="{% url 'shop:admin_products' %}" class="btn btn-secondary"><i class="fas fa-times"></i> Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function bindSizeCheckboxes(selector) {
+        document.querySelectorAll(selector).forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const sizeValue = this.value;
+                const quantityInput = document.getElementById(`quantity_${sizeValue}`);
+                if (!quantityInput) return;
+                if (this.checked) {
+                    quantityInput.disabled = false;
+                    quantityInput.focus();
+                } else {
+                    quantityInput.disabled = true;
+                    quantityInput.value = '';
+                }
+            });
+        });
+    }
+
+    function setSizeGroup(productType) {
+        const womenBox = document.getElementById('women-sizes');
+        const kidsBox = document.getElementById('kids-sizes');
+        const isKids = productType === 'kids';
+
+        womenBox.style.display = isKids ? 'none' : 'grid';
+        kidsBox.style.display = isKids ? 'grid' : 'none';
+
+        document.querySelectorAll('.women-size-input').forEach(input => {
+            input.disabled = isKids;
+            if (isKids) {
+                input.checked = false;
+                const qty = document.getElementById(`quantity_${input.value}`);
+                if (qty) { qty.disabled = true; qty.value = ''; }
+            }
+        });
+        document.querySelectorAll('.kids-size-input').forEach(input => {
+            input.disabled = !isKids;
+            if (!isKids) {
+                input.checked = false;
+                const qty = document.getElementById(`quantity_${input.value}`);
+                if (qty) { qty.disabled = true; qty.value = ''; }
+            }
+        });
+    }
+
+    bindSizeCheckboxes('.women-size-input');
+    bindSizeCheckboxes('.kids-size-input');
+
+    const productTypeSelect = document.getElementById('product_type');
+    if (productTypeSelect) {
+        setSizeGroup(productTypeSelect.value);
+        productTypeSelect.addEventListener('change', function() {
+            setSizeGroup(this.value);
+        });
+    }
+</script>
+{% endblock %}

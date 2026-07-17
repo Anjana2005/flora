@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+
+{% block title %}Shopping Cart - Flora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cart-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        padding: 2rem;
+        text-align: center;
+        color: white;
+    }
+
+    .cart-header h1 {
+        font-size: 2.5rem;
+    }
+
+    .cart-container {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 2rem;
+        margin: 2rem 0;
+    }
+
+    .cart-items {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    }
+
+    .cart-item {
+        display: grid;
+        grid-template-columns: 100px 1fr auto;
+        gap: 1.5rem;
+        padding: 1.5rem 0;
+        border-bottom: 2px solid #F5F5F5;
+    }
+
+    .cart-item:last-child {
+        border-bottom: none;
+    }
+
+    .item-image {
+        width: 100px;
+        height: 100px;
+        background: var(--bg-light);
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: var(--primary-color);
+        overflow: hidden;
+    }
+
+    .item-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .item-details h3 {
+        margin-bottom: 0.5rem;
+        color: var(--text-dark);
+    }
+
+    .item-category {
+        color: var(--text-light);
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .item-price {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: var(--secondary-color);
+    }
+
+    .item-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 1rem;
+    }
+
+    .quantity-controls {
+        display: flex;
+        align-items: center;
+        border: 2px solid #E8E8E8;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .quantity-controls button {
+        background: var(--bg-light);
+        border: none;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        transition: background 0.3s ease;
+    }
+
+    .quantity-controls button:hover {
+        background: var(--primary-color);
+        color: white;
+    }
+
+    .quantity-controls input {
+        width: 50px;
+        text-align: center;
+        border: none;
+        padding: 0.5rem;
+    }
+
+    .remove-btn {
+        background: none;
+        border: none;
+        color: #E74C3C;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: color 0.3s ease;
+    }
+
+    .remove-btn:hover {
+        color: #C0392B;
+    }
+
+    .cart-summary {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        height: fit-content;
+        position: sticky;
+        top: 100px;
+    }
+
+    .summary-title {
+        font-size: 1.5rem;
+        margin-bottom: 1.5rem;
+        color: var(--text-dark);
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 1rem 0;
+        border-bottom: 1px solid #F5F5F5;
+    }
+
+    .summary-row.total {
+        border-top: 2px solid var(--primary-color);
+        border-bottom: none;
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: var(--secondary-color);
+    }
+
+    .checkout-btn {
+        width: 100%;
+        padding: 1rem;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border: none;
+        border-radius: 50px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 1rem;
+    }
+
+    .checkout-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(255,107,157,0.3);
+    }
+
+    .continue-shopping {
+        display: block;
+        text-align: center;
+        margin-top: 1rem;
+        color: var(--text-light);
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+
+    .continue-shopping:hover {
+        color: var(--primary-color);
+    }
+
+    .empty-cart {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+
+    .empty-cart i {
+        font-size: 5rem;
+        color: var(--text-light);
+        margin-bottom: 1rem;
+    }
+
+    @media (max-width: 768px) {
+        .cart-container {
+            grid-template-columns: 1fr;
+        }
+
+        .cart-item {
+            grid-template-columns: 80px 1fr;
+            gap: 1rem;
+        }
+
+        .item-actions {
+            grid-column: 1 / -1;
+            flex-direction: row;
+            justify-content: space-between;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cart-header">
+    <h1><i class="fas fa-shopping-cart"></i> Shopping Cart</h1>
+</div>
+
+<div class="container">
+    {% if cart %}
+    <div class="cart-container">
+        <div class="cart-items">
+            {% for item in cart %}
+            <div class="cart-item">
+                <div class="item-image">
+                    {% if item.product.images.all %}
+                        <img src="{{ item.product.images.first.image.url }}" alt="{{ item.product.name }}">
+                    {% else %}
+                        <i class="fas fa-tshirt"></i>
+                    {% endif %}
+                </div>
+                <div class="item-details">
+                    <h3>{{ item.product.name }}</h3>
+                    <div class="item-category">{{ item.product.category.name }}</div>
+                    <div class="item-price">₹{{ item.price }} × {{ item.quantity }}</div>
+                </div>
+                <div class="item-actions">
+                    <form method="post" action="{% url 'cart:cart_update' item.product.id %}">
+                        {% csrf_token %}
+                        <div class="quantity-controls">
+                            <button type="button" onclick="this.nextElementSibling.stepDown(); this.parentElement.parentElement.submit();">-</button>
+                            <input type="number" name="quantity" value="{{ item.quantity }}" min="0" max="{{ item.product.stock }}">
+                            <button type="button" onclick="this.previousElementSibling.stepUp(); this.parentElement.parentElement.submit();">+</button>
+                        </div>
+                    </form>
+                    <form method="post" action="{% url 'cart:cart_remove' item.product.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="remove-btn">
+                            <i class="fas fa-trash"></i> Remove
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="cart-summary">
+            <h2 class="summary-title">Order Summary</h2>
+            <div class="summary-row">
+                <span>Subtotal ({{ cart|length }} items)</span>
+                <span>₹{{ cart.get_total_price }}</span>
+            </div>
+            <div class="summary-row">
+                <span>Shipping</span>
+                <span>{% if cart.get_total_price > 999 %}FREE{% else %}₹50{% endif %}</span>
+            </div>
+            <div class="summary-row total">
+                <span>Total</span>
+                <span>₹{% if cart.get_total_price > 999 %}{{ cart.get_total_price }}{% else %}{{ cart.get_total_price|add:50 }}{% endif %}</span>
+            </div>
+            
+            <a href="{% url 'cart:checkout' %}">
+                <button class="checkout-btn">
+                    <i class="fas fa-lock"></i> Proceed to Checkout
+                </button>
+            </a>
+            <a href="{% url 'shop:product_list' %}" class="continue-shopping">
+                <i class="fas fa-arrow-left"></i> Continue Shopping
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-cart">
+        <i class="fas fa-shopping-cart"></i>
+        <h2>Your cart is empty</h2>
+        <p style="color: var(--text-light); margin-bottom: 2rem;">Add some beautiful items to get started!</p>
+        <a href="{% url 'shop:product_list' %}" class="btn btn-primary">Start Shopping</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

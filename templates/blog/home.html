@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+
+{% block title %}Blog - Fashion Tips & Style Inspiration | Flora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .blog-hero {
+        background: linear-gradient(135deg, rgba(255,107,157,0.9), rgba(196,69,105,0.9));
+        padding: 4rem 2rem;
+        text-align: center;
+        color: white;
+    }
+
+    .blog-hero h1 {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .blog-hero p {
+        font-size: 1.2rem;
+        opacity: 0.95;
+    }
+
+    .blog-container {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 3rem;
+        margin-top: 3rem;
+    }
+
+    .featured-section {
+        margin-bottom: 3rem;
+    }
+
+    .featured-title {
+        font-size: 1.8rem;
+        color: var(--text-dark);
+        margin-bottom: 1.5rem;
+    }
+
+    .featured-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 2rem;
+    }
+
+    .featured-card {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .featured-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 30px rgba(255,107,157,0.2);
+    }
+
+    .featured-image {
+        width: 100%;
+        height: 200px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        color: white;
+    }
+
+    .featured-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .featured-content {
+        padding: 1.5rem;
+    }
+
+    .featured-content h3 {
+        font-size: 1.3rem;
+        margin-bottom: 0.5rem;
+        color: var(--text-dark);
+    }
+
+    .featured-content p {
+        color: var(--text-light);
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+
+    .post-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.85rem;
+        color: var(--text-light);
+    }
+
+    .latest-section {
+        margin-bottom: 3rem;
+    }
+
+    .latest-title {
+        font-size: 1.8rem;
+        color: var(--text-dark);
+        margin-bottom: 1.5rem;
+        border-bottom: 3px solid var(--primary-color);
+        padding-bottom: 0.5rem;
+    }
+
+    .post-item {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .post-item:hover {
+        box-shadow: 0 15px 30px rgba(255,107,157,0.2);
+    }
+
+    .post-thumbnail {
+        width: 200px;
+        height: 200px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        color: white;
+    }
+
+    .post-thumbnail img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .post-content {
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .post-content h3 {
+        font-size: 1.3rem;
+        margin-bottom: 0.5rem;
+        color: var(--text-dark);
+    }
+
+    .post-excerpt {
+        color: var(--text-light);
+        margin-bottom: 1rem;
+        line-height: 1.5;
+    }
+
+    .sidebar {
+        height: fit-content;
+        position: sticky;
+        top: 100px;
+    }
+
+    .sidebar-widget {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+
+    .widget-title {
+        font-size: 1.2rem;
+        color: var(--text-dark);
+        margin-bottom: 1rem;
+        border-bottom: 2px solid var(--primary-color);
+        padding-bottom: 0.5rem;
+    }
+
+    .widget-list {
+        list-style: none;
+    }
+
+    .widget-list li {
+        margin-bottom: 0.8rem;
+    }
+
+    .widget-list a {
+        color: var(--text-light);
+        text-decoration: none;
+        transition: color 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .widget-list a:hover {
+        color: var(--primary-color);
+    }
+
+    .search-widget {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .search-widget input {
+        flex: 1;
+        padding: 0.8rem;
+        border: 2px solid #E8E8E8;
+        border-radius: 8px;
+        font-size: 0.9rem;
+    }
+
+    .search-widget button {
+        padding: 0.8rem 1rem;
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.3s ease;
+    }
+
+    .search-widget button:hover {
+        background: var(--secondary-color);
+    }
+
+    @media (max-width: 768px) {
+        .blog-container {
+            grid-template-columns: 1fr;
+        }
+
+        .featured-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .post-item {
+            grid-template-columns: 1fr;
+        }
+
+        .post-thumbnail {
+            width: 100%;
+            height: 250px;
+        }
+
+        .sidebar {
+            position: static;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Blog Hero -->
+<section class="blog-hero">
+    <h1>Blog & Style Inspiration</h1>
+    <p>Fashion tips, trends, and styling guides to help you look your best</p>
+</section>
+
+<div class="container">
+    <div class="blog-container">
+        <main>
+            <!-- Featured Posts -->
+            {% if featured_posts %}
+            <section class="featured-section">
+                <h2 class="featured-title">Featured Articles</h2>
+                <div class="featured-grid">
+                    {% for post in featured_posts %}
+                    <a href="{{ post.get_absolute_url }}" class="featured-card">
+                        <div class="featured-image">
+                            {% if post.image %}
+                                <img src="{{ post.image.url }}" alt="{{ post.title }}">
+                            {% else %}
+                                <i class="fas fa-pen-fancy"></i>
+                            {% endif %}
+                        </div>
+                        <div class="featured-content">
+                            <h3>{{ post.title }}</h3>
+                            <p>{{ post.excerpt|truncatewords:15 }}</p>
+                            <div class="post-meta">
+                                <span><i class="fas fa-calendar"></i> {{ post.publish|date:"M d, Y" }}</span>
+                                <span><i class="fas fa-eye"></i> {{ post.views }}</span>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Latest Posts -->
+            {% if latest_posts %}
+            <section class="latest-section">
+                <h2 class="latest-title">Latest Posts</h2>
+                {% for post in latest_posts %}
+                <a href="{{ post.get_absolute_url }}" class="post-item">
+                    <div class="post-thumbnail">
+                        {% if post.image %}
+                            <img src="{{ post.image.url }}" alt="{{ post.title }}">
+                        {% else %}
+                            <i class="fas fa-pen-fancy"></i>
+                        {% endif %}
+                    </div>
+                    <div class="post-content">
+                        <h3>{{ post.title }}</h3>
+                        <p class="post-excerpt">{{ post.excerpt }}</p>
+                        <div class="post-meta">
+                            <span><i class="fas fa-user"></i> {{ post.author.get_full_name }}</span>
+                            <span><i class="fas fa-calendar"></i> {{ post.publish|date:"M d, Y" }}</span>
+                            <span><i class="fas fa-folder"></i> {{ post.category.name }}</span>
+                            <span><i class="fas fa-eye"></i> {{ post.views }}</span>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </section>
+            {% endif %}
+        </main>
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <!-- Search Widget -->
+            <div class="sidebar-widget">
+                <h3 class="widget-title">Search Posts</h3>
+                <form method="get" class="search-widget">
+                    <input type="text" name="search" placeholder="Search articles..." value="{{ search_query }}">
+                    <button type="submit"><i class="fas fa-search"></i></button>
+                </form>
+            </div>
+
+            <!-- Categories Widget -->
+            {% if categories %}
+            <div class="sidebar-widget">
+                <h3 class="widget-title">Categories</h3>
+                <ul class="widget-list">
+                    {% for category in categories %}
+                    <li>
+                        <a href="{{ category.get_absolute_url }}">
+                            <i class="fas fa-folder"></i> {{ category.name }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+
+            <!-- Featured Widget -->
+            {% if featured_posts %}
+            <div class="sidebar-widget">
+                <h3 class="widget-title">Featured</h3>
+                <ul class="widget-list">
+                    {% for post in featured_posts %}
+                    <li>
+                        <a href="{{ post.get_absolute_url }}">
+                            <i class="fas fa-star"></i> {{ post.title }}
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </aside>
+    </div>
+</div>
+{% endblock %}

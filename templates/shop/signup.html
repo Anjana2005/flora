@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}Sign Up - Flora{% endblock %}
+
+{% block extra_css %}
+<style>
+
+    /* FLORAL SOFT PINK PAGE */
+    h1, h2, .cart-header h1, .checkout-header h1, .auth-header h1 {
+        font-family: 'Playfair Display', serif !important;
+        color: #5A3F4A !important;
+    }
+    .checkout-btn, .order-btn, .submit-btn, .btn-primary {
+        background: linear-gradient(135deg, #F4A7B9, #E87A96) !important;
+        color: white !important;
+        border: none !important;
+        box-shadow: 0 12px 24px rgba(232,122,150,0.25) !important;
+    }
+    .cart-items, .cart-summary, .checkout-form, .order-summary, .auth-container {
+        border-radius: 24px !important;
+        border: 1px solid rgba(232,122,150,0.14) !important;
+        box-shadow: 0 16px 36px rgba(232,122,150,0.12) !important;
+        background: rgba(255,255,255,0.94) !important;
+    }
+    .summary-row.total, .item-total, .item-price { color: #E87A96 !important; }
+    input, select, textarea {
+        border-radius: 14px !important;
+        border: 1.5px solid rgba(232,122,150,0.18) !important;
+        font-family: 'Nunito', sans-serif !important;
+    }
+    input:focus, select:focus, textarea:focus {
+        border-color: #F4A7B9 !important;
+        box-shadow: 0 0 0 4px rgba(244,167,185,0.18) !important;
+        outline: none !important;
+    }
+
+
+    .auth-container {
+        max-width: 400px;
+        margin: 3rem auto;
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .auth-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .auth-header h1 {
+        font-size: 2rem;
+        color: var(--text-dark);
+        margin-bottom: 0.5rem;
+    }
+
+    .auth-header p {
+        color: var(--text-light);
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        color: var(--text-dark);
+        font-weight: 600;
+    }
+
+    .form-group input {
+        width: 100%;
+        padding: 0.8rem;
+        border: 2px solid #E8E8E8;
+        border-radius: 8px;
+        font-size: 1rem;
+        transition: border-color 0.3s ease;
+    }
+
+    .form-group input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+    }
+
+    .submit-btn {
+        width: 100%;
+        padding: 0.8rem;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border: none;
+        border-radius: 50px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .submit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(232,122,150,0.3);
+    }
+
+    .error-message {
+        background: #F8D7DA;
+        color: #721C24;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #E74C3C;
+    }
+
+    .error-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    .error-list li {
+        margin-bottom: 0.3rem;
+    }
+
+    .divider {
+        text-align: center;
+        margin: 1.5rem 0;
+        color: var(--text-light);
+    }
+
+    .divider::before,
+    .divider::after {
+        content: '';
+        display: inline-block;
+        width: 30%;
+        height: 1px;
+        background: #E8E8E8;
+        vertical-align: middle;
+    }
+
+    .divider::before {
+        margin-right: 0.5rem;
+    }
+
+    .divider::after {
+        margin-left: 0.5rem;
+    }
+
+    .auth-link {
+        text-align: center;
+        margin-top: 1.5rem;
+    }
+
+    .auth-link a {
+        color: var(--primary-color);
+        text-decoration: none;
+        font-weight: 600;
+    }
+
+    .auth-link a:hover {
+        text-decoration: underline;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-header">
+        <h1>Create Account</h1>
+        <p>Join Flora and discover amazing fashion</p>
+    </div>
+
+    {% if form.non_field_errors %}
+    <div class="error-message">
+        <ul class="error-list">
+            {% for error in form.non_field_errors %}
+                <li>{{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="form-group">
+            <label for="id_username">Username</label>
+            <input type="text" id="id_username" name="username" required>
+            {% if form.username.errors %}
+            <div class="error-message">
+                {{ form.username.errors.0 }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="id_email">Email Address</label>
+            <input type="email" id="id_email" name="email" required>
+            {% if form.email.errors %}
+            <div class="error-message">
+                {{ form.email.errors.0 }}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="id_password1">Password</label>
+            <input type="password" id="id_password1" name="password1" required>
+            {% if form.password1.errors %}
+            <div class="error-message">
+                <ul class="error-list">
+                {% for error in form.password1.errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="id_password2">Confirm Password</label>
+            <input type="password" id="id_password2" name="password2" required>
+            {% if form.password2.errors %}
+            <div class="error-message">
+                {{ form.password2.errors.0 }}
+            </div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="submit-btn">Create Account</button>
+    </form>
+
+    <div class="auth-link">
+        Already have an account? <a href="{% url 'shop:login' %}">Sign In</a>
+    </div>
+</div>
+{% endblock %}

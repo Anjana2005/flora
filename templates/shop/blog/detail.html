@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ blog.title }} - Flora Blog{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 900px; margin: 60px auto; padding: 0 20px;">
+    <!-- Back Button -->
+    <a 
+        href="{% url 'shop:blog_list' %}" 
+        style="display: inline-flex; align-items: center; gap: 8px; color: var(--primary-color); text-decoration: none; font-weight: 600; margin-bottom: 30px; transition: gap 0.2s;"
+        onmouseover="this.style.gap='12px';"
+        onmouseout="this.style.gap='8px';"
+    >
+        <i class="fas fa-arrow-left"></i> Back to Blogs
+    </a>
+
+    <!-- Blog Post -->
+    <article style="background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 15px rgba(0,0,0,0.1);">
+        
+        <!-- Blog Image -->
+        {% if blog.image %}
+            <div style="width: 100%; height: 400px; overflow: hidden; background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);">
+                <img 
+                    src="{{ blog.image.url }}" 
+                    alt="{{ blog.title }}" 
+                    style="width: 100%; height: 100%; object-fit: cover;"
+                >
+            </div>
+        {% else %}
+            <div style="width: 100%; height: 400px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); display: flex; align-items: center; justify-content: center; color: white;">
+                <i class="fas fa-blog" style="font-size: 100px; opacity: 0.5;"></i>
+            </div>
+        {% endif %}
+
+        <!-- Blog Content -->
+        <div style="padding: 50px 40px;">
+            <!-- Title -->
+            <h1 style="color: var(--text-dark); font-size: 42px; line-height: 1.2; margin-bottom: 25px;">
+                {{ blog.title }}
+            </h1>
+
+            <!-- Author & Meta Info -->
+            <div style="display: flex; align-items: center; gap: 20px; padding: 20px 0; border-top: 1px solid #E0E0E0; border-bottom: 1px solid #E0E0E0; margin-bottom: 30px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-user-circle" style="color: var(--primary-color); font-size: 32px;"></i>
+                    <div>
+                        <p style="font-weight: 600; color: var(--text-dark); margin: 0;">{{ blog.author.get_full_name|default:blog.author.username }}</p>
+                        <p style="font-size: 13px; color: var(--text-light); margin: 2px 0 0 0;">@{{ blog.author.username }}</p>
+                    </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px; color: var(--text-light); font-size: 14px;">
+                    <i class="fas fa-calendar"></i>
+                    <span>{{ blog.created_at|date:"F d, Y" }}</span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px; color: var(--text-light); font-size: 14px;">
+                    <i class="fas fa-clock"></i>
+                    <span>{{ blog.created_at|time:"h:i A" }}</span>
+                </div>
+            </div>
+
+            <!-- Blog Description -->
+            <div style="font-size: 16px; line-height: 1.8; color: var(--text-dark); word-wrap: break-word; white-space: pre-wrap;">
+                {{ blog.description }}
+            </div>
+
+            <!-- Action Buttons (if user is the author) -->
+            {% if user == blog.author %}
+                <div style="display: flex; gap: 15px; margin-top: 40px; padding-top: 30px; border-top: 1px solid #E0E0E0;">
+                    <a 
+                        href="{% url 'shop:edit_blog' blog.id %}" 
+                        style="padding: 12px 25px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; border-radius: 5px; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 8px; transition: transform 0.2s, box-shadow 0.2s;"
+                        onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(255, 107, 157, 0.4)';"
+                        onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                    >
+                        <i class="fas fa-edit"></i> Edit Blog
+                    </a>
+                    <button 
+                        onclick="if(confirm('Are you sure you want to delete this blog post?')) { document.getElementById('delete-form').submit(); }" 
+                        style="padding: 12px 25px; background-color: #E74C3C; color: white; border: none; border-radius: 5px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background-color 0.2s;"
+                        onmouseover="this.style.backgroundColor='#C0392B';"
+                        onmouseout="this.style.backgroundColor='#E74C3C';"
+                    >
+                        <i class="fas fa-trash"></i> Delete Blog
+                    </button>
+                </div>
+
+                <!-- Hidden delete form -->
+                <form id="delete-form" method="POST" action="{% url 'shop:delete_blog' blog.id %}" style="display: none;">
+                    {% csrf_token %}
+                </form>
+            {% endif %}
+        </div>
+    </article>
+
+    <!-- Related/More Blogs Section -->
+    <div style="margin-top: 60px;">
+        <h2 style="color: var(--text-dark); margin-bottom: 30px;">More Stories</h2>
+        <!-- You can add more blogs here later -->
+    </div>
+</div>
+
+<style>
+    article {
+        animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        div[style*="padding: 50px 40px"] {
+            padding: 30px 20px !important;
+        }
+
+        h1 {
+            font-size: 28px !important;
+        }
+    }
+</style>
+{% endblock %}

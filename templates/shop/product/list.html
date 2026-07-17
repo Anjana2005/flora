@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}{% if category %}{{ category.name }}{% else %}Shop{% endif %} - Flora{% endblock %}
+
+{% block extra_css %}
+<style>
+    .shop-hero {
+        max-width: 1240px;
+        margin: 1.4rem auto 0;
+        padding: 0 1.25rem;
+    }
+
+    .shop-hero-card {
+        background: linear-gradient(145deg, #FFF7FA, #FDECF1 60%, #F7FBF5);
+        border: 1px solid rgba(232,122,150,0.16);
+        border-radius: 28px;
+        padding: 1.8rem;
+        box-shadow: 0 16px 36px rgba(232,122,150,0.10);
+    }
+
+    .shop-hero-card h1 {
+        font-size: clamp(1.8rem, 3vw, 2.5rem);
+        margin-bottom: 0.4rem;
+    }
+
+    .shop-hero-card p {
+        color: #8B7E85;
+        max-width: 40rem;
+    }
+
+    .shop-layout {
+        max-width: 1240px;
+        margin: 0 auto;
+        padding: 1.4rem 1.25rem 2rem;
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 1.2rem;
+    }
+
+    .filter-panel {
+        background: rgba(255,255,255,0.94);
+        border: 1px solid rgba(232,122,150,0.14);
+        border-radius: 24px;
+        box-shadow: 0 16px 36px rgba(232,122,150,0.10);
+        padding: 1.1rem;
+        height: fit-content;
+        position: sticky;
+        top: 100px;
+    }
+
+    .filter-panel h3 {
+        font-size: 1rem;
+        margin: 1rem 0 0.7rem;
+        color: #D46A8A;
+    }
+
+    .filter-panel h3:first-child { margin-top: 0; }
+
+    .search-box input {
+        width: 100%;
+        border: 1.5px solid rgba(232,122,150,0.18);
+        border-radius: 999px;
+        padding: 0.8rem 1rem;
+        font-family: 'Nunito', sans-serif;
+        outline: none;
+    }
+
+    .search-box input:focus {
+        border-color: #F4A7B9;
+        box-shadow: 0 0 0 4px rgba(244,167,185,0.16);
+    }
+
+    .filter-panel ul {
+        list-style: none;
+        display: grid;
+        gap: 0.35rem;
+    }
+
+    .filter-panel a {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.7rem 0.85rem;
+        border-radius: 14px;
+        font-weight: 700;
+        color: #4A3F45;
+        background: #FFF9FB;
+        border: 1px solid transparent;
+    }
+
+    .filter-panel a:hover,
+    .filter-panel a.active {
+        background: #FDECF1;
+        color: #D46A8A;
+        border-color: rgba(232,122,150,0.18);
+    }
+
+    .empty-state,
+    .pagination {
+        margin-top: 1.2rem;
+    }
+
+    .empty-state {
+        background: white;
+        border: 1px solid rgba(232,122,150,0.14);
+        border-radius: 24px;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: 0 16px 36px rgba(232,122,150,0.08);
+    }
+
+    .pagination {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+
+    .pagination a,
+    .pagination .current {
+        min-width: 40px;
+        height: 40px;
+        padding: 0 0.8rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        border: 1px solid rgba(232,122,150,0.16);
+        background: white;
+        color: #4A3F45;
+    }
+
+    .pagination .current,
+    .pagination a:hover {
+        background: linear-gradient(135deg, #F4A7B9, #E87A96);
+        color: white;
+        border-color: transparent;
+    }
+
+    @media (max-width: 980px) {
+        .shop-layout {
+            grid-template-columns: 1fr;
+        }
+        .filter-panel {
+            position: static;
+        }
+        .products-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 640px) {
+        .products-grid { grid-template-columns: 1fr; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="shop-hero">
+    <div class="shop-hero-card">
+        <h1>{% if category %}{{ category.name }}{% else %}Shop All Collections{% endif %}</h1>
+        <p>{% if category %}{{ category.description|default:"Soft pink styles chosen for comfort and charm." }}{% else %}Browse women and kids fashion in a fresh floral boutique layout.{% endif %}</p>
+    </div>
+</section>
+
+<div class="shop-layout">
+    <aside class="filter-panel">
+        <h3>Search</h3>
+        <div class="search-box">
+            <form method="get">
+                <input type="text" name="search" placeholder="Search products..." value="{{ search_query }}">
+            </form>
+        </div>
+
+        <h3>Categories</h3>
+        <ul>
+            <li><a href="{% url 'shop:product_list' %}" {% if not category %}class="active"{% endif %}>All Products</a></li>
+            {% for cat in categories %}
+            <li>
+                <a href="{{ cat.get_absolute_url }}" {% if category == cat %}class="active"{% endif %}>
+                    <i class="fas fa-spa"></i> {{ cat.name }}
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+
+        <h3>Type</h3>
+        <ul>
+            <li><a href="?type=women"><i class="fas fa-female"></i> Women</a></li>
+            <li><a href="?type=kids"><i class="fas fa-child"></i> Kids</a></li>
+        </ul>
+
+        <h3>Style</h3>
+        <ul>
+            <li><a href="?style=traditional"><i class="fas fa-dharmachakra"></i> Traditional</a></li>
+            <li><a href="?style=western"><i class="fas fa-hat-cowboy"></i> Western</a></li>
+            <li><a href="?style=fusion"><i class="fas fa-magic"></i> Fusion</a></li>
+        </ul>
+    </aside>
+
+    <section>
+        {% if products %}
+        <div class="products-grid">
+            {% for product in products %}
+            {% include "partials/product_card.html" %}
+            {% endfor %}
+        </div>
+
+        {% if page_obj.has_other_pages %}
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            {% endif %}
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                    <span class="current">{{ num }}</span>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <a href="?page={{ num }}">{{ num }}</a>
+                {% endif %}
+            {% endfor %}
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}">Next</a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="empty-state">
+            <h3>No products found</h3>
+            <p>Try another category or search term.</p>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

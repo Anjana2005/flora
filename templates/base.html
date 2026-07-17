@@ -1,0 +1,811 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Flora | Best Kids & Women Wear Shop in Thrissur | Fashion Boutique{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}Flora is a trusted kids and women wear boutique in Thrissur, offering elegant outfits, festive wear, daily fashion, and stylish collections for all ages.{% endblock %}">
+    <meta name="keywords" content="best kids wear shop in thrissur, best women wear shop in thrissur, floral fashion boutique, kids wear thrissur, women wear thrissur, Flora Thrissur, Faisal VM, Mursal VM, Afsal VM, VK Moosakutty">
+    <meta name="author" content="Anjana KS">
+    <meta name="owner" content="Faisal VM, Mursal VM, Afsal VM, VK Moosakutty">
+    <meta name="creator" content="Anjana KS">
+    <meta name="robots" content="index,follow">
+    <meta name="google-site-verification" content="flora-thrissur-owners-faisal-mursal-afsal-vk-moosakutty">
+    <meta property="og:title" content="Flora | Best Kids & Women Wear Shop in Thrissur">
+    <meta property="og:description" content="Discover stylish kids and women wear in Thrissur with Flora. Elegant fashion, festive outfits, and joyful styles for every occasion.">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Flora">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Flora | Best Kids & Women Wear Shop in Thrissur">
+    <meta name="twitter:description" content="Flora offers premium kids and women wear in Thrissur with colorful, trendy, and comfortable collections.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/flora.css' %}">
+
+    <style>
+        :root {
+            --pink: #F4A7B9;
+            --pink-deep: #E87A96;
+            --pink-soft: #FDECF1;
+            --rose: #D46A8A;
+            --leaf: #A8C5A0;
+            --ink: #4A3F45;
+            --muted: #8B7E85;
+            --cream: #FFF9FB;
+            --white: #FFFFFF;
+            --line: rgba(232, 122, 150, 0.18);
+            --shadow: 0 18px 40px rgba(232, 122, 150, 0.14);
+            --radius: 24px;
+            --primary-color: #E87A96;
+            --secondary-color: #D46A8A;
+            --accent-color: #F4A7B9;
+            --text-dark: #4A3F45;
+            --text-light: #8B7E85;
+            --bg-light: #FDECF1;
+            --success: #7FA87A;
+            --warning: #E8B86D;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 10% 10%, rgba(244,167,185,0.18), transparent 28%),
+                radial-gradient(circle at 90% 0%, rgba(168,197,160,0.14), transparent 24%),
+                linear-gradient(180deg, #FFFCFD 0%, #FFF5F8 50%, #FFF9FB 100%);
+            min-height: 100vh;
+            line-height: 1.6;
+            font-size: 16px;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Playfair Display', serif;
+            color: #5A3F4A;
+            font-weight: 600;
+        }
+
+        a { color: inherit; text-decoration: none; }
+        img { max-width: 100%; display: block; }
+
+        .site-shell { min-height: 100vh; display: flex; flex-direction: column; }
+        .site-main { flex: 1; }
+
+        /* Top announcement bar */
+        .top-bloom-bar {
+            background: linear-gradient(90deg, #F4A7B9, #E87A96 55%, #A8C5A0);
+            color: white;
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 700;
+            padding: 0.55rem 1rem;
+            letter-spacing: 0.02em;
+        }
+
+        /* New header template */
+        .flora-header {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background: rgba(255, 249, 251, 0.92);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--line);
+            box-shadow: 0 10px 28px rgba(232,122,150,0.08);
+        }
+
+        .header-inner {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 0.9rem 1.25rem;
+            display: grid;
+            grid-template-columns: auto 1fr auto;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+        }
+
+        .brand img {
+            height: 52px;
+            width: auto;
+        }
+
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.1;
+        }
+
+        .brand-text strong {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.7rem;
+            color: var(--rose);
+        }
+
+        .brand-text small {
+            color: var(--muted);
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .main-nav {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+            list-style: none;
+        }
+
+        .main-nav > li { position: relative; }
+
+        .main-nav a {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.55rem 0.85rem;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 0.92rem;
+            color: var(--ink);
+            transition: 0.2s ease;
+        }
+
+        .main-nav a:hover,
+        .main-nav a.active {
+            background: var(--pink-soft);
+            color: var(--rose);
+        }
+
+        .dropdown-panel {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            min-width: 260px;
+            background: white;
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            padding: 1rem;
+            z-index: 50;
+        }
+
+        .dropdown:hover > .dropdown-panel,
+        .dropdown:focus-within > .dropdown-panel {
+            display: block;
+        }
+
+        .dropdown-panel h4 {
+            font-size: 0.85rem;
+            margin-bottom: 0.7rem;
+            color: var(--rose);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .dropdown-panel .cat-list {
+            display: grid;
+            gap: 0.35rem;
+        }
+
+        .dropdown-panel a {
+            border-radius: 12px;
+            padding: 0.55rem 0.7rem;
+            background: #FFF9FB;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+        }
+
+        .icon-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: white;
+            border: 1px solid var(--line);
+            color: var(--ink);
+            position: relative;
+            transition: 0.2s ease;
+        }
+
+        .icon-btn:hover {
+            background: var(--pink-soft);
+            color: var(--rose);
+            transform: translateY(-1px);
+        }
+
+        .cart-count {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #F4A7B9, #E87A96);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+        }
+
+        .menu-toggle {
+            display: none;
+            border: none;
+            background: white;
+            border: 1px solid var(--line);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            color: var(--rose);
+            font-size: 1.1rem;
+        }
+
+        .messages {
+            max-width: 1240px;
+            margin: 1rem auto 0;
+            padding: 0 1.25rem;
+        }
+
+        .alert {
+            padding: 0.95rem 1rem;
+            border-radius: 16px;
+            margin-bottom: 0.75rem;
+            display: flex;
+            gap: 0.7rem;
+            align-items: center;
+            background: #EAF8EF;
+            color: #1F6B3A;
+            border: 1px solid rgba(127,168,122,0.25);
+        }
+
+        .alert-error, .alert-danger {
+            background: #FDECEC;
+            color: #8B2E3A;
+            border-color: rgba(232,122,150,0.25);
+        }
+
+        .container {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 2rem 1.25rem;
+        }
+
+        .btn,
+        .btn-primary,
+        .btn-secondary,
+        .checkout-btn,
+        .order-btn,
+        .submit-btn,
+        .add-to-cart-btn,
+        .buy-now-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            border: none;
+            border-radius: 999px;
+            padding: 0.85rem 1.4rem;
+            font-family: 'Nunito', sans-serif;
+            font-weight: 800;
+            cursor: pointer;
+            transition: 0.25s ease;
+            text-decoration: none;
+        }
+
+        .btn-primary,
+        .checkout-btn,
+        .order-btn,
+        .submit-btn,
+        .buy-now-btn {
+            background: linear-gradient(135deg, #F4A7B9, #E87A96);
+            color: white;
+            box-shadow: 0 12px 24px rgba(232,122,150,0.25);
+        }
+
+        .btn-secondary,
+        .add-to-cart-btn {
+            background: white;
+            color: var(--rose);
+            border: 2px solid #F4A7B9;
+        }
+
+        .btn:hover,
+        .btn-primary:hover,
+        .checkout-btn:hover,
+        .order-btn:hover,
+        .submit-btn:hover,
+        .buy-now-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .product-card {
+            background: rgba(255,255,255,0.94);
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .product-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 24px 48px rgba(232,122,150,0.18);
+        }
+
+        /* Reviews */
+        .reviews-section {
+            max-width: 1240px;
+            margin: 1rem auto 2rem;
+            padding: 1.6rem;
+            border-radius: 28px;
+            background: linear-gradient(145deg, #5A3F4A, #8E5A6B);
+            color: white;
+            box-shadow: var(--shadow);
+        }
+
+        .reviews-header {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .reviews-section h2 { color: white; }
+        .reviews-subtitle { color: rgba(255,255,255,0.85); max-width: 640px; }
+        .reviews-link {
+            align-self: start;
+            background: rgba(255,255,255,0.12);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.18);
+            padding: 0.7rem 1rem;
+            border-radius: 999px;
+            font-weight: 700;
+        }
+
+        .reviews-slider {
+            display: grid;
+            grid-auto-flow: column;
+            grid-auto-columns: minmax(280px, 1fr);
+            gap: 1rem;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            padding-bottom: 0.4rem;
+        }
+
+        .review-card {
+            scroll-snap-align: start;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 20px;
+            padding: 1.1rem;
+            min-height: 180px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .review-stars { color: #FFD7A8; margin-bottom: 0.5rem; }
+        .review-author { font-weight: 800; }
+        .review-location { opacity: 0.8; font-size: 0.9rem; }
+        .review-controls { display: flex; gap: 0.6rem; margin-top: 1rem; }
+        .review-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.14);
+            color: white;
+            cursor: pointer;
+        }
+
+        /* Footer template */
+        .flora-footer {
+            margin-top: 3rem;
+            background: linear-gradient(160deg, #5A3F4A 0%, #7A4E5D 50%, #8E5A6B 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .flora-footer::before {
+            content: "✿  ❀  ✿  ❀  ✿";
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            letter-spacing: 1rem;
+            opacity: 0.18;
+            pointer-events: none;
+        }
+
+        .footer-grid {
+            max-width: 1240px;
+            margin: 0 auto;
+            padding: 3.5rem 1.25rem 1.5rem;
+            display: grid;
+            grid-template-columns: 1.4fr 1fr 1fr 1.2fr;
+            gap: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer-grid h3 {
+            color: #F7C9D4;
+            margin-bottom: 0.9rem;
+            font-size: 1.15rem;
+        }
+
+        .footer-grid p,
+        .footer-grid a {
+            color: rgba(255,255,255,0.86);
+            display: block;
+            margin-bottom: 0.45rem;
+        }
+
+        .footer-grid a:hover { color: white; }
+
+        .social-row {
+            display: flex;
+            gap: 0.7rem;
+            margin-top: 1rem;
+        }
+
+        .social-row a {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #F4A7B9, #E87A96);
+            color: white !important;
+            margin: 0;
+        }
+
+        .footer-bottom {
+            text-align: center;
+            padding: 1rem 1.25rem 1.4rem;
+            border-top: 1px solid rgba(255,255,255,0.12);
+            color: rgba(255,255,255,0.8);
+            position: relative;
+            z-index: 1;
+        }
+
+        .whatsapp-float {
+            position: fixed;
+            right: 18px;
+            bottom: 18px;
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            color: white;
+            font-size: 1.7rem;
+            box-shadow: 0 10px 24px rgba(18,140,126,0.35);
+            z-index: 1200;
+        }
+
+        @media (max-width: 980px) {
+            .header-inner {
+                grid-template-columns: auto 1fr auto;
+                gap: 0.75rem;
+            }
+
+            .menu-toggle { display: inline-flex; align-items: center; justify-content: center; }
+
+            .main-nav {
+                display: none;
+                grid-column: 1 / -1;
+                flex-direction: column;
+                align-items: stretch;
+                background: white;
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 0.7rem;
+            }
+
+            .main-nav.open { display: flex; }
+
+            .main-nav > li { width: 100%; }
+            .main-nav a {
+                width: 100%;
+                justify-content: flex-start;
+                padding: 0.75rem 0.8rem;
+            }
+
+            .dropdown-panel {
+                position: static;
+                box-shadow: none;
+                border: none;
+                padding: 0.3rem 0 0.3rem 0.8rem;
+                min-width: 0;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .top-bloom-bar {
+                font-size: 0.8rem;
+                padding: 0.5rem 0.8rem;
+            }
+
+            .header-inner {
+                padding: 0.75rem 0.9rem;
+            }
+
+            .brand img { height: 40px; }
+            .brand-text strong { font-size: 1.2rem; }
+            .brand-text small { display: none; }
+
+            .icon-btn {
+                width: 40px;
+                height: 40px;
+            }
+
+            .header-actions .text-hide { display: none; }
+            .container {
+                padding: 1.25rem 0.9rem;
+            }
+
+            .reviews-section {
+                margin: 1rem 0.9rem 2rem;
+                padding: 1rem;
+            }
+
+            .review-card {
+                min-height: auto;
+            }
+
+            .footer-grid {
+                grid-template-columns: 1fr;
+                padding: 2.5rem 0.95rem 1.2rem;
+            }
+
+            .whatsapp-float {
+                width: 54px;
+                height: 54px;
+                right: 12px;
+                bottom: 12px;
+                font-size: 1.45rem;
+            }
+        }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+<div class="site-shell">
+    <div class="top-bloom-bar">✿ Best Kids & Women Wear Shop in Thrissur ✿</div>
+
+    <header class="flora-header">
+        <div class="header-inner">
+            <a href="{% url 'shop:home' %}" class="brand">
+                <img src="{% static 'images/image-removebg-preview.png' %}" alt="Flora logo">
+                <span class="brand-text">
+                    <strong>Flora</strong>
+                    <small>Wear the positivity</small>
+                </span>
+            </a>
+
+            <button class="menu-toggle" id="menuToggle" type="button" aria-label="Toggle menu">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <ul class="main-nav" id="mainNav">
+                {% if user.is_authenticated and user.is_staff %}
+                    <li><a href="{% url 'shop:admin_dashboard' %}">Dashboard</a></li>
+                    <li><a href="{% url 'shop:admin_products' %}">Products</a></li>
+                    <li><a href="{% url 'shop:admin_categories' %}">Categories</a></li>
+                    <li><a href="{% url 'shop:admin_orders' %}">Orders</a></li>
+                    <li><a href="{% url 'shop:admin_contacts' %}">Contacts</a></li>
+                    <li><a href="{% url 'shop:admin_blogs' %}">Blogs</a></li>
+                    <li><a href="{% url 'shop:logout' %}"><i class="fas fa-sign-out-alt"></i> Logout</a></li>
+                {% else %}
+                    <li><a href="{% url 'shop:home' %}">Home</a></li>
+                    <li><a href="{% url 'shop:product_list' %}">Shop</a></li>
+                    <li class="dropdown">
+                        <a href="#">Women <i class="fas fa-chevron-down"></i></a>
+                        <div class="dropdown-panel">
+                            <h4>Women's Collections</h4>
+                            <div class="cat-list">
+                                {% for category in women_categories %}
+                                    <a href="{{ category.get_absolute_url }}">{{ category.name }}</a>
+                                {% empty %}
+                                    <a href="{% url 'shop:product_list' %}?type=women">All Women</a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </li>
+                    <li class="dropdown">
+                        <a href="#">Kids <i class="fas fa-chevron-down"></i></a>
+                        <div class="dropdown-panel">
+                            <h4>Kids' Picks</h4>
+                            <div class="cat-list">
+                                {% for category in kids_categories %}
+                                    <a href="{{ category.get_absolute_url }}">{{ category.name }}</a>
+                                {% empty %}
+                                    <a href="{% url 'shop:product_list' %}?type=kids">All Kids</a>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </li>
+                    <li><a href="{% url 'shop:blog_list' %}">Blog</a></li>
+                    <li><a href="{% url 'shop:about' %}">About</a></li>
+                    <li><a href="{% url 'shop:contact' %}">Contact</a></li>
+                {% endif %}
+            </ul>
+
+            <div class="header-actions">
+                {% if not user.is_staff %}
+                <a href="{% url 'cart:cart_detail' %}" class="icon-btn" title="Cart">
+                    <i class="fas fa-shopping-bag"></i>
+                    {% if cart|length > 0 %}
+                        <span class="cart-count">{{ cart|length }}</span>
+                    {% endif %}
+                </a>
+                {% endif %}
+
+                {% if user.is_authenticated %}
+                    {% if not user.is_staff %}
+                    <a href="{% url 'shop:profile' %}" class="icon-btn" title="Profile"><i class="fas fa-user"></i></a>
+                    {% endif %}
+                    <a href="{% url 'shop:logout' %}" class="icon-btn" title="Logout"><i class="fas fa-sign-out-alt"></i></a>
+                {% else %}
+                    <a href="{% url 'shop:login' %}" class="icon-btn" title="Login"><i class="fas fa-sign-in-alt"></i></a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                <i class="fas fa-check-circle"></i>
+                <span>{{ message }}</span>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <main class="site-main">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% if google_reviews %}
+    <section class="reviews-section">
+        <div class="reviews-header">
+            <div>
+                <h2>Flora Reviews</h2>
+                <p class="reviews-subtitle">Loved for soft styles, pretty fits, and careful packing. A few words from recent shoppers.</p>
+            </div>
+            <a class="reviews-link" href="https://www.google.com/search?q=flora+thrissur+reviews&sca_esv=43eaa34c7c6289fa&rlz=1C1GCEA_enIN1170IN1170&sxsrf=APpeQntwFNpYIyxMSem9D5YrmC2QmmaPGA%3A1784262372595&ei=5K5ZaqTqI6bg1e8Pw6bP2QQ&oq=flora+thrissur+&gs_lp=Egxnd3Mtd2l6LXNlcnAiD2Zsb3JhIHRocmlzc3VyICoCCAIyBhAAGBYYHjIGEAAYFhgeMgYQABgWGB4yBhAAGBYYHjIGEAAYFhgeMgYQABgWGB4yBhAAGBYYHjIGEAAYFhgeMgYQABgWGB4yBhAAGBYYHkjgFFD_AVj_AXABeACQAQCYAZwCoAGrA6oBBTAuMS4xuAEByAEA-AEBmAICoAK9AcICCxAAGIAEGMsBGLADwgIJEAAYBxgeGLADwgIHEAAYHhiwA8ICCRAAGAgYHhiwA5gDAIgGAZAGCpIHAzEuMaAH9AayBwMwLjG4B5UBwgcHMi0xLjAuMcgHKIAIAQ&sclient=gws-wiz-serp#lrd=0x3ba7ef7a4a38b3e3:0x3b17573f389f4e67,1,,,, target="_blank" rel="noopener noreferrer">Read Google reviews</a>
+        </div>
+        <div class="reviews-slider" id="reviewsSlider">
+            {% for review in google_reviews|slice:":3" %}
+            <article class="review-card">
+                <div>
+                    <div class="review-stars">{{ review.stars }}</div>
+                    <p>{{ review.text }}</p>
+                </div>
+                <div>
+                    <div class="review-author">{{ review.author_name }}</div>
+                    {% if review.relative_time_description %}
+                    <div class="review-location">{{ review.relative_time_description }}</div>
+                    {% endif %}
+                </div>
+            </article>
+            {% endfor %}
+        </div>
+        <div class="review-controls">
+            <button type="button" class="review-button" data-direction="-1" aria-label="Previous review"><i class="fas fa-chevron-left"></i></button>
+            <button type="button" class="review-button" data-direction="1" aria-label="Next review"><i class="fas fa-chevron-right"></i></button>
+        </div>
+    </section>
+    {% endif %}
+
+    <footer class="flora-footer">
+        <div class="footer-grid">
+            <div>
+                <h3>About Flora</h3>
+                <p>Soft pink florals, pretty silhouettes, and joyful everyday fashion for women and kids.</p>
+                <div class="social-row">
+                    <a href="https://www.instagram.com/flora_tcr?igsh=aGtmMnF3d2FxZmZr" target="_blank"><i class="fab fa-instagram"></i></a>
+                    <a href="https://wa.me/918129296969" target="_blank"><i class="fab fa-whatsapp"></i></a>
+                </div>
+            </div>
+            <div>
+                <h3>Explore</h3>
+                <a href="{% url 'shop:product_list' %}">Shop All</a>
+                <a href="{% url 'shop:product_list' %}?type=women">Women</a>
+                <a href="{% url 'shop:product_list' %}?type=kids">Kids</a>
+                <a href="{% url 'shop:blog_list' %}">Blog</a>
+            </div>
+            <div>
+                <h3>Help</h3>
+                <a href="{% url 'shop:contact' %}">Contact</a>
+                <a href="{% url 'shop:about' %}">About</a>
+                <a href="{% url 'shop:contact' %}">Shipping Info</a>
+                <a href="{% url 'shop:contact' %}">Returns</a>
+            </div>
+            <div>
+                <h3>Visit Us</h3>
+                <p><i class="fas fa-phone"></i> +91 9605531101</p>
+                <p><i class="fas fa-envelope"></i> florahighroad2023@gmail.com</p>
+                <p><i class="fas fa-map-marker-alt"></i> High Rd, South Bazar, Thrissur, Kerala 680001</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Flora. Made with love.</p>
+        </div>
+    </footer>
+</div>
+
+<a href="https://wa.me/918129296969" target="_blank" class="whatsapp-float" aria-label="Chat on WhatsApp">
+    <i class="fab fa-whatsapp"></i>
+</a>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const menuToggle = document.getElementById('menuToggle');
+        const mainNav = document.getElementById('mainNav');
+        if (menuToggle && mainNav) {
+            menuToggle.addEventListener('click', function () {
+                mainNav.classList.toggle('open');
+            });
+
+            mainNav.querySelectorAll('a').forEach(function (link) {
+                link.addEventListener('click', function () {
+                    mainNav.classList.remove('open');
+                });
+            });
+        }
+
+        const slider = document.getElementById('reviewsSlider');
+        const buttons = document.querySelectorAll('.review-button');
+        if (slider && buttons.length) {
+            const card = slider.querySelector('.review-card');
+            const slideSize = card ? card.offsetWidth + 16 : 300;
+            buttons.forEach(button => {
+                button.addEventListener('click', function () {
+                    slider.scrollBy({ left: slideSize * Number(this.dataset.direction), behavior: 'smooth' });
+                });
+            });
+        }
+    });
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

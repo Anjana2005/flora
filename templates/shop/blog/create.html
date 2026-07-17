@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if is_edit %}Edit Blog{% else %}Create Blog Post{% endif %} - Flora{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 700px; margin: 60px auto; padding: 0 20px;">
+    <div class="form-container" style="background: var(--bg-light); padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+        <h1 style="margin-bottom: 30px; color: var(--primary-color); text-align: center;">
+            {% if is_edit %}Edit Blog Post{% else %}Create New Blog Post{% endif %}
+        </h1>
+
+        {% if messages %}
+            <div style="margin-bottom: 20px;">
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}" style="padding: 12px; margin-bottom: 10px; border-radius: 5px; {% if message.tags == 'error' %}background-color: #f8d7da; color: #721c24;{% else %}background-color: #d4edda; color: #155724;{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <!-- Title Field -->
+            <div style="margin-bottom: 25px;">
+                <label for="id_title" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-dark);">Blog Title *</label>
+                <input 
+                    type="text" 
+                    id="id_title" 
+                    name="title" 
+                    maxlength="300"
+                    value="{% if is_edit %}{{ blog.title }}{% endif %}"
+                    placeholder="Enter your blog title (max 300 characters)"
+                    required
+                    style="width: 100%; padding: 12px; border: 2px solid #E0E0E0; border-radius: 5px; font-family: 'Poppins', sans-serif; font-size: 16px; transition: border-color 0.3s;"
+                    onchange="document.querySelectorAll('input[name=title]')[0].style.borderColor = 'var(--primary-color)';"
+                >
+            </div>
+
+            <!-- Description Field -->
+            <div style="margin-bottom: 25px;">
+                <label for="id_description" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-dark);">Blog Description *</label>
+                <textarea 
+                    id="id_description" 
+                    name="description" 
+                    rows="8"
+                    placeholder="Write your blog post here... Share your thoughts, stories, and experiences!"
+                    required
+                    style="width: 100%; padding: 12px; border: 2px solid #E0E0E0; border-radius: 5px; font-family: 'Poppins', sans-serif; font-size: 16px; resize: vertical; transition: border-color 0.3s;"
+                    onchange="document.querySelectorAll('textarea[name=description]')[0].style.borderColor = 'var(--primary-color)';"
+                >{% if is_edit %}{{ blog.description }}{% endif %}</textarea>
+            </div>
+
+            <!-- Image Field -->
+            <div style="margin-bottom: 25px;">
+                <label for="id_image" style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-dark);">Blog Image (Optional)</label>
+                {% if is_edit and blog.image %}
+                    <div style="margin-bottom: 15px;">
+                        <p style="font-size: 14px; color: var(--text-light); margin-bottom: 8px;">Current Image:</p>
+                        <img src="{{ blog.image.url }}" alt="Current blog image" style="max-width: 200px; height: auto; border-radius: 5px;">
+                    </div>
+                {% endif %}
+                <input 
+                    type="file" 
+                    id="id_image" 
+                    name="image" 
+                    accept="image/*"
+                    style="display: block; width: 100%; padding: 12px; border: 2px dashed #E0E0E0; border-radius: 5px; cursor: pointer;"
+                >
+                <p style="font-size: 12px; color: var(--text-light); margin-top: 8px;">Supported formats: JPG, PNG, GIF. Max size: 5MB</p>
+            </div>
+
+            <!-- Buttons -->
+            <div style="display: flex; gap: 15px; margin-top: 30px;">
+                <button 
+                    type="submit" 
+                    style="flex: 1; padding: 12px 20px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s;"
+                    onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 15px rgba(255, 107, 157, 0.4)';"
+                    onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none';"
+                >
+                    {% if is_edit %}Update Blog Post{% else %}Publish Blog Post{% endif %}
+                </button>
+                <a 
+                    href="{% url 'shop:blog_list' %}" 
+                    style="flex: 1; padding: 12px 20px; background-color: #E0E0E0; color: var(--text-dark); border: none; border-radius: 5px; font-size: 16px; font-weight: 600; cursor: pointer; text-align: center; text-decoration: none; transition: background-color 0.2s;"
+                    onmouseover="this.style.backgroundColor='#D0D0D0';"
+                    onmouseout="this.style.backgroundColor='#E0E0E0';"
+                >
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .container {
+        animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    input:focus,
+    textarea:focus {
+        outline: none;
+        border-color: var(--primary-color) !important;
+        box-shadow: 0 0 8px rgba(255, 107, 157, 0.3);
+    }
+</style>
+{% endblock %}
