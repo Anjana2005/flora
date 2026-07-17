@@ -20,7 +20,7 @@ def get_whatsapp_number():
 
 
 def get_whatsapp_numbers():
-    """All shop WhatsApp numbers (digits with country code)."""
+    """Shop WhatsApp number(s) — digits with country code."""
     configured = getattr(settings, 'WHATSAPP_SHOP_NUMBERS', None) or []
     numbers = []
     for n in configured:
@@ -31,10 +31,8 @@ def get_whatsapp_numbers():
     primary = ''.join(ch for ch in str(primary) if ch.isdigit())
     if primary and primary not in numbers:
         numbers.insert(0, primary)
-    # Ensure both shop numbers are present
-    for fallback in ('918891331444', '919605531101'):
-        if fallback not in numbers:
-            numbers.append(fallback)
+    if not numbers:
+        numbers = ['918891331444']
     return numbers
 
 

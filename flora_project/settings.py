@@ -209,17 +209,11 @@ UPI_ID = os.environ.get('UPI_ID', '7591927789@fam')
 # Leave empty for personal UPI — a wrong payee name breaks deep links in GPay/PhonePe
 # while manual "Send to UPI ID" still works (app looks up the real name).
 UPI_MERCHANT_NAME = os.environ.get('UPI_MERCHANT_NAME', '')
-# Shop contact / WhatsApp numbers (with country code 91)
+# Shop contact / WhatsApp (with country code 91)
 WHATSAPP_ORDER_NUMBER = os.environ.get('WHATSAPP_ORDER_NUMBER', '918891331444')
 WHATSAPP_SHOP_NUMBERS = [
     n.strip()
-    for n in os.environ.get(
-        'WHATSAPP_SHOP_NUMBERS',
-        '918891331444,919605531101',
-    ).split(',')
+    for n in os.environ.get('WHATSAPP_SHOP_NUMBERS', '918891331444').split(',')
     if n.strip()
 ]
-SHOP_PHONE_DISPLAY = [
-    '+91 88913 31444',
-    '+91 96055 31101',
-]
+SHOP_PHONE_DISPLAY = ['+91 88913 31444']
