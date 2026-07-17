@@ -5,7 +5,7 @@ from django.conf import settings
 
 
 def get_upi_id():
-    return (getattr(settings, 'UPI_ID', None) or '7591927789@fam').strip()
+    return (getattr(settings, 'UPI_ID', None) or 'flora1101@axl').strip()
 
 
 def is_valid_upi_id(value):
@@ -168,21 +168,24 @@ def build_order_payment_qr(order, size=280, scan_page_url=None, slot=None):
     """
     Build UPI link + QR for one order.
 
-    Scanner always embeds the order note code (e.g. FLORA12) in UPI remarks (tn)
-    so the shop can match the payment to the order.
+    - upi_link always includes note code (tn=FLORA#) for GPay/PhonePe remarks
+    - If scan_page_url is set, QR hits the site first so admin can mark Paid: Yes
+      for that order code, then redirects to UPI with the same note
     """
     order_ref = build_order_note_code(order.id)
-    # Clear note for bank statement / UPI app remarks
     payment_note = order_ref
     amount = order.get_total_cost()
     if slot is None:
         slot, _ = current_qr_slot()
-    # Unique tr per time slot; note (tn) stays the stable order code
     tr = build_payment_ref(order.id, f'S{slot}')
     upi_link = build_upi_link(amount, order_ref, note=payment_note, tr=tr)
 
-    # Pure UPI in QR — amount + note code filled by default
-    qr_payload = upi_link
+    # Site URL in QR → order-specific scanner marks Paid, then opens UPI with note
+    if scan_page_url:
+        sep = '&' if '?' in scan_page_url else '?'
+        qr_payload = f'{scan_page_url}{sep}note={quote(payment_note, safe="")}&slot={slot}'
+    else:
+        qr_payload = upi_link
 
     return {
         'order_ref': order_ref,

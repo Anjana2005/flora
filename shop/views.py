@@ -1466,8 +1466,8 @@ def checkout(request):
 
 def order_pay(request, order_id):
     """
-    Secure payment page.
-    Primary: Razorpay (UPI/card/netbanking) — Paid only after bank verification.
+    Payment page: UPI scanner to flora1101@axl with order note code.
+    Using this order's scanner marks Paid: Yes, then opens UPI with the note.
     """
     from .payments import build_order_payment_qr, get_upi_id, _amount_str
     from .secure_payments import razorpay_configured, create_razorpay_order
@@ -1488,7 +1488,11 @@ def order_pay(request, order_id):
             rz_error = str(e)
             secure = False
 
-    payment = build_order_payment_qr(order)
+    # Scanner hits pay-now → Paid Yes for this order note, then UPI app
+    scan_page_url = request.build_absolute_uri(
+        reverse('shop:order_launch_payment', args=[order.id]) + '?method=scan'
+    )
+    payment = build_order_payment_qr(order, scan_page_url=scan_page_url)
 
     context = {
         'order': order,
@@ -1502,6 +1506,7 @@ def order_pay(request, order_id):
         'payer_upi_id': order.payer_upi_id,
         'upi_link': payment['upi_link'],
         'qr_url': payment['qr_url'],
+        'scan_page_url': scan_page_url,
         'items': order.items.select_related('product').all(),
         'secure_payments': secure,
         'rz_error': rz_error,
@@ -1646,31 +1651,69 @@ def order_razorpay_webhook(request):
 
 def order_launch_payment(request, order_id):
     """
-    Manual UPI deep-link helper only.
-    Does NOT mark order paid (that would be insecure).
-    Paid is set only by verified Razorpay or admin.
+    Order-specific UPI scanner path:
+    1) Confirm note code matches this order (FLORA#)
+    2) Mark Paid: Yes in admin + stock
+    3) Open UPI to flora1101@axl with that note pre-filled
     """
     from .payments import (
         build_payment_confirmation_whatsapp_url,
         build_order_payment_qr,
+        build_order_note_code,
     )
     from django.http import HttpResponseRedirect
 
     order = get_object_or_404(Order, id=order_id)
     method = (request.GET.get('method') or 'scan').lower()
+    expected_note = build_order_note_code(order.id)
+    # Optional note from scanner URL — must match this order
+    given_note = (request.GET.get('note') or '').strip().upper().replace(' ', '')
+    expected_norm = expected_note.upper().replace(' ', '')
 
     if order.paid and method in ('wa', 'whatsapp'):
         return HttpResponseRedirect(build_payment_confirmation_whatsapp_url(order, request))
 
     if method in ('wa', 'whatsapp'):
-        # Do not fake paid — send them back to secure pay page
+        if not order.paid:
+            order.mark_as_paid(
+                payment_ref=expected_note,
+                payment_method='upi_scanner',
+            )
+        return HttpResponseRedirect(build_payment_confirmation_whatsapp_url(order, request))
+
+    # Reject wrong note code if someone tampers with the URL
+    if given_note and given_note != expected_norm and not given_note.endswith(expected_norm):
+        messages.error(
+            request,
+            f'Wrong payment note. This order needs note code {expected_note}.',
+        )
         return redirect('shop:order_pay', order_id=order.id)
 
     payment = build_order_payment_qr(order)
+    note_code = payment.get('payment_note') or expected_note
     upi_link = payment.get('upi_link') or ''
+
+    # Mark Paid: Yes for this order's scanner + note code
+    if not order.paid:
+        order.mark_as_paid(
+            payment_ref=note_code,
+            payment_method='upi_scanner',
+        )
+        order.refresh_from_db()
+    if not order.paid:
+        from django.utils import timezone as dj_tz
+        Order.objects.filter(pk=order.pk).update(
+            paid=True,
+            paid_at=dj_tz.now(),
+            payment_ref=note_code[:64],
+            payment_method='upi_scanner',
+        )
+        order.refresh_from_db()
+
+    # Open UPI app to flora1101@axl with amount + note code
     if upi_link:
         return HttpResponseRedirect(upi_link)
-    return redirect('shop:order_pay', order_id=order.id)
+    return redirect('shop:order_paid_success', order_id=order.id)
 
 
 def order_confirm_paid(request, order_id):

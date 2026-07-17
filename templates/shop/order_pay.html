@@ -240,7 +240,11 @@
                 <div>Note / remarks: <code id="copy-note">{{ payment_note|default:order_ref }}</code></div>
                 <div style="margin-top:0.25rem;font-size:0.8rem;">Ref: <code>{{ payment_tr|default:order_ref }}</code></div>
             </div>
-            {% if upi_link %}
+            {% if scan_page_url %}
+            <a class="btn-pay" href="{{ scan_page_url }}&note={{ payment_note|default:order_ref|urlencode }}" style="margin-top:0.85rem;">
+                Pay with UPI note {{ payment_note|default:order_ref }} → Paid: Yes
+            </a>
+            {% elif upi_link %}
             <a class="btn-secondary" href="{{ upi_link }}">Open UPI app with note {{ payment_note|default:order_ref }}</a>
             {% endif %}
             <button type="button" class="btn-secondary" id="copy-note-btn" style="cursor:pointer;width:100%;font-family:inherit;">
@@ -249,8 +253,10 @@
         </div>
 
         <div class="note">
-            <strong>How to match payment:</strong> In your bank / UPI history the remark should include
-            <strong>{{ payment_note|default:order_ref }}</strong>. Admin uses this code for the order.
+            <strong>Pay to:</strong> <code>{{ shop_upi_id }}</code><br>
+            <strong>Note code:</strong> <strong>{{ payment_note|default:order_ref }}</strong><br>
+            Using this order’s scanner (or the pink button) sets admin to
+            <strong>Paid: Yes ✓</strong>, then opens UPI with amount + note filled.
         </div>
 
         <ul class="items">
