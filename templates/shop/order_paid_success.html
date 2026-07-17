@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Payment recorded - Flora{% endblock %}
+{% block title %}Order paid - Flora{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -27,13 +27,14 @@
 {% block content %}
 <div class="ok-wrap">
     <div class="ok-card">
-        <h1>Payment recorded</h1>
-        <div class="badge-paid">Paid: Yes</div>
+        <h1>Order complete</h1>
+        <div class="badge-paid">Paid: Yes · Stock updated</div>
         <p>Order <strong>{{ order_ref }}</strong></p>
         <p>Amount: <strong>₹{{ total }}</strong></p>
         <p style="color:#666;margin-top:1rem;">
-            Admin panel shows this order as <strong>Paid: Yes</strong>.
-            Stock for the ordered size(s) has been reduced.
+            Admin dashboard shows <strong>Paid: Yes</strong>.
+            Product size stock has been reduced.
+            WhatsApp should open with full order details — tap <strong>Send</strong>.
         </p>
         <ul style="text-align:left;margin:1rem auto;max-width:320px;color:#5A3F4A;">
             {% for item in items %}
@@ -44,8 +45,8 @@
             </li>
             {% endfor %}
         </ul>
-        <a class="ok-btn wa" id="whatsapp-paid-btn" href="{{ whatsapp_url }}" target="_blank" rel="noopener">
-            Send paid order on WhatsApp
+        <a class="ok-btn wa" href="{{ whatsapp_url }}" target="_blank" rel="noopener">
+            Open WhatsApp order again
         </a>
         <br>
         <a class="ok-btn" href="{% url 'shop:home' %}">Back to shop</a>
@@ -58,7 +59,7 @@
     var url = "{{ whatsapp_url|escapejs }}";
     setTimeout(function () {
         window.open(url, '_blank');
-    }, 500);
+    }, 400);
 })();
 {% endif %}
 </script>

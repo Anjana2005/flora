@@ -1361,8 +1361,6 @@ def checkout(request):
 
             cart.clear()
             request.session['last_order_id'] = order.id
-            # Open WhatsApp with full order details after checkout
-            request.session['open_whatsapp_order'] = order.id
             return redirect('shop:order_pay', order_id=order.id)
         except Exception as e:
             messages.error(request, f'Error placing order: {str(e)}')
@@ -1371,34 +1369,26 @@ def checkout(request):
 
 
 def order_pay(request, order_id):
-    """Show UPI payment page; can auto-open WhatsApp with order details."""
+    """
+    Payment page. User taps a pay link → auto paid + stock + WhatsApp.
+    No separate "I paid successfully" confirmation step.
+    """
     from .payments import (
         build_upi_link,
         build_upi_qr_url,
-        build_android_intent_link,
-        build_gpay_link,
-        build_phonepe_link,
-        build_paytm_link,
-        build_order_whatsapp_url,
         get_upi_id,
-        get_upi_name,
         _amount_str,
     )
+    from django.urls import reverse
 
     order = get_object_or_404(Order, id=order_id)
     order_ref = f"FLORA{order.id}"
     total = order.get_total_cost()
     upi_link = build_upi_link(total, order_ref)
-    whatsapp_url = build_order_whatsapp_url(order, request, paid=order.paid)
 
-    # Auto-open WhatsApp once after placing order (product + order details)
-    auto_open_whatsapp = False
-    if request.session.get('open_whatsapp_order') == order.id:
-        auto_open_whatsapp = True
-        try:
-            del request.session['open_whatsapp_order']
-        except KeyError:
-            pass
+    # If already paid, show success
+    if order.paid:
+        return redirect('shop:order_paid_success', order_id=order.id)
 
     context = {
         'order': order,
@@ -1406,56 +1396,87 @@ def order_pay(request, order_id):
         'total': total,
         'amount_str': _amount_str(total),
         'upi_id': get_upi_id(),
-        'upi_name': get_upi_name() or '—',
-        'upi_link': upi_link,
-        'android_intent_link': build_android_intent_link(total, order_ref),
-        'gpay_link': build_gpay_link(total, order_ref),
-        'phonepe_link': build_phonepe_link(total, order_ref),
-        'paytm_link': build_paytm_link(total, order_ref),
         'qr_url': build_upi_qr_url(upi_link),
-        'whatsapp_url': whatsapp_url,
-        'auto_open_whatsapp': auto_open_whatsapp,
         'items': order.items.select_related('product').all(),
+        # All pay buttons hit launch (auto confirm + stock + WhatsApp)
+        'pay_upi_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=upi',
+        'pay_android_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=android',
+        'pay_gpay_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=gpay',
+        'pay_phonepe_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=phonepe',
+        'pay_paytm_url': reverse('shop:order_launch_payment', args=[order.id]) + '?method=paytm',
     }
     return render(request, 'shop/order_pay.html', context)
 
 
-def order_confirm_paid(request, order_id):
+def order_launch_payment(request, order_id):
     """
-    Customer taps "I have paid" after UPI transfer.
-    Marks order.paid = True in admin and reduces size stock once.
+    User clicked a UPI pay link on the site.
+    Automatically: mark Paid: Yes, reduce stock, then open UPI app + WhatsApp
+    with product/order details. No extra user confirmation step.
     """
-    if request.method != 'POST':
-        return redirect('shop:order_pay', order_id=order_id)
+    from .payments import (
+        build_upi_link,
+        build_android_intent_link,
+        build_gpay_link,
+        build_phonepe_link,
+        build_paytm_link,
+        build_order_whatsapp_url,
+        _amount_str,
+    )
+    from django.urls import reverse
 
     order = get_object_or_404(Order, id=order_id)
-    if order.mark_as_paid():
-        messages.success(
-            request,
-            f'Thank you! Payment recorded for order FLORA{order.id}. '
-            f'Stock updated for the selected size(s).',
-        )
-        # Open WhatsApp again with PAID status + full order details
-        request.session['open_whatsapp_paid'] = order.id
-    else:
-        messages.info(request, 'This order is already marked as paid.')
+    order_ref = f"FLORA{order.id}"
+    total = order.get_total_cost()
+    method = (request.GET.get('method') or 'upi').lower()
 
-    return redirect('shop:order_paid_success', order_id=order.id)
+    # Auto-confirm payment + stock (idempotent)
+    order.mark_as_paid()
+
+    if method == 'gpay':
+        pay_target = build_gpay_link(total, order_ref)
+    elif method == 'phonepe':
+        pay_target = build_phonepe_link(total, order_ref)
+    elif method == 'paytm':
+        pay_target = build_paytm_link(total, order_ref)
+    elif method == 'android':
+        pay_target = build_android_intent_link(total, order_ref)
+    else:
+        pay_target = build_upi_link(total, order_ref)
+
+    whatsapp_url = build_order_whatsapp_url(order, request, paid=True)
+    success_url = reverse('shop:order_paid_success', args=[order.id])
+
+    return render(
+        request,
+        'shop/order_payment_launch.html',
+        {
+            'order': order,
+            'order_ref': order_ref,
+            'total': total,
+            'amount_str': _amount_str(total),
+            'pay_target': pay_target,
+            'whatsapp_url': whatsapp_url,
+            'success_url': success_url,
+            'items': order.items.select_related('product').all(),
+        },
+    )
+
+
+def order_confirm_paid(request, order_id):
+    """Legacy endpoint — same as auto launch (no manual approval UI)."""
+    return redirect('shop:order_launch_payment', order_id=order_id)
 
 
 def order_paid_success(request, order_id):
     from .payments import build_order_whatsapp_url
 
     order = get_object_or_404(Order, id=order_id)
-    whatsapp_url = build_order_whatsapp_url(order, request, paid=True)
+    # Ensure paid if they landed here somehow
+    if not order.paid:
+        order.mark_as_paid()
 
-    auto_open_whatsapp = False
-    if request.session.get('open_whatsapp_paid') == order.id:
-        auto_open_whatsapp = True
-        try:
-            del request.session['open_whatsapp_paid']
-        except KeyError:
-            pass
+    whatsapp_url = build_order_whatsapp_url(order, request, paid=True)
 
     return render(
         request,
@@ -1466,7 +1487,7 @@ def order_paid_success(request, order_id):
             'total': order.get_total_cost(),
             'items': order.items.select_related('product').all(),
             'whatsapp_url': whatsapp_url,
-            'auto_open_whatsapp': auto_open_whatsapp,
+            'auto_open_whatsapp': True,
         },
     )
 

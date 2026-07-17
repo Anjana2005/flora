@@ -39,16 +39,6 @@
         margin-bottom: 1rem;
         line-height: 1.45;
     }
-    .alert-ok {
-        background: #e8f5e9;
-        color: #1b5e20;
-        border-radius: 12px;
-        padding: 0.85rem 1rem;
-        font-size: 0.92rem;
-        text-align: left;
-        margin: 1rem 0;
-        line-height: 1.45;
-    }
     .qr-box {
         background: #fff;
         border-radius: 16px;
@@ -72,16 +62,6 @@
         text-align: left;
     }
     .upi-id-box strong { color: #5A3F4A; }
-    .steps {
-        text-align: left;
-        background: #fafafa;
-        border-radius: 12px;
-        padding: 1rem 1.1rem 1rem 1.6rem;
-        margin: 1rem 0;
-        color: #5A3F4A;
-        line-height: 1.55;
-    }
-    .steps li { margin: 0.35rem 0; }
     .pay-btn {
         display: block;
         width: 100%;
@@ -99,12 +79,10 @@
         box-sizing: border-box;
         font-family: inherit;
     }
-    .pay-btn.copy-main { background: linear-gradient(135deg, #5C6BC0, #3949AB); }
+    .pay-btn.primary { background: linear-gradient(135deg, #27AE60, #2ECC71); font-size: 1.05rem; }
     .pay-btn.gpay { background: linear-gradient(135deg, #4285F4, #34A853); }
     .pay-btn.phonepe { background: linear-gradient(135deg, #5f259f, #7b3fb8); }
     .pay-btn.paytm { background: linear-gradient(135deg, #00baf2, #002970); }
-    .pay-btn.wa { background: linear-gradient(135deg, #25D366, #128C7E); }
-    .pay-btn.confirm { background: linear-gradient(135deg, #27AE60, #2ECC71); }
     .pay-btn.secondary {
         background: #fff;
         color: #E87A96;
@@ -124,13 +102,6 @@
         color: #5A3F4A;
     }
     .items li { margin: 0.35rem 0; }
-    .copy-row {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
-        justify-content: center;
-        margin-top: 0.5rem;
-    }
     .copy-btn {
         background: transparent;
         border: 1px dashed #E87A96;
@@ -139,13 +110,7 @@
         padding: 0.45rem 1rem;
         cursor: pointer;
         font-weight: 600;
-    }
-    .muted-title {
-        margin-top: 1.5rem;
-        font-size: 0.85rem;
-        color: #999;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
+        margin: 0.25rem;
     }
 </style>
 {% endblock %}
@@ -153,14 +118,14 @@
 {% block content %}
 <div class="pay-wrap">
     <div class="pay-card">
-        <h1>Complete your payment</h1>
+        <h1>Pay for your order</h1>
         <p>Order <strong>{{ order_ref }}</strong></p>
         <div class="pay-amount">₹{{ total }}</div>
 
         <div class="alert-info">
-            <strong>Best method (same as paying inside the app):</strong>
-            Copy the UPI ID below → open GPay/PhonePe yourself → Send money → paste ID → enter amount.
-            Website “open app” buttons often fail even when the UPI ID works.
+            Tap a <strong>Pay</strong> button below. The site will automatically mark the order as
+            <strong>Paid</strong>, reduce stock, open your UPI app, then open WhatsApp with full order details.
+            You only need to complete the UPI PIN and send the WhatsApp message.
         </div>
 
         <div class="upi-id-box">
@@ -168,37 +133,20 @@
             Amount: <strong id="pay-amount">{{ amount_str }}</strong><br>
             Note: <strong id="pay-note">{{ order_ref }}</strong>
         </div>
-        <div class="copy-row">
-            <button type="button" class="copy-btn" onclick="copyText('upi-id', 'UPI ID')">Copy UPI ID</button>
-            <button type="button" class="copy-btn" onclick="copyText('pay-amount', 'Amount')">Copy amount</button>
-            <button type="button" class="copy-btn" onclick="copyText('pay-note', 'Note')">Copy note</button>
-        </div>
+        <button type="button" class="copy-btn" onclick="copyText('upi-id', 'UPI ID')">Copy UPI ID</button>
+        <button type="button" class="copy-btn" onclick="copyText('pay-amount', 'Amount')">Copy amount</button>
 
-        <button type="button" class="pay-btn copy-main" onclick="copyText('upi-id', 'UPI ID')">
-            1) Copy UPI ID — then open GPay / PhonePe
-        </button>
+        <!-- Primary: auto paid + stock + UPI + WhatsApp -->
+        <a class="pay-btn primary" href="{{ pay_upi_url }}">Pay with UPI now</a>
+        <a class="pay-btn" href="{{ pay_android_url }}">Pay (Android UPI)</a>
+        <a class="pay-btn gpay" href="{{ pay_gpay_url }}">Pay with Google Pay</a>
+        <a class="pay-btn phonepe" href="{{ pay_phonepe_url }}">Pay with PhonePe</a>
+        <a class="pay-btn paytm" href="{{ pay_paytm_url }}">Pay with Paytm</a>
 
-        <ol class="steps">
-            <li>Tap <strong>Copy UPI ID</strong> above</li>
-            <li>Open <strong>GPay / PhonePe / Paytm</strong> (from your phone home screen)</li>
-            <li>Tap <strong>Send / Pay</strong> → To UPI ID</li>
-            <li>Paste <strong>{{ upi_id }}</strong></li>
-            <li>Enter amount <strong>₹{{ amount_str }}</strong></li>
-            <li>Note: <strong>{{ order_ref }}</strong> → Pay with PIN</li>
-            <li>Come back and tap the green confirm button</li>
-        </ol>
-
-        <div class="qr-box">
+        <div class="qr-box" style="margin-top:1.25rem;">
             <img src="{{ qr_url }}" alt="UPI QR code" id="upi-qr">
         </div>
-        <p class="hint">Or scan this QR in any UPI app</p>
-
-        <p class="muted-title">Try open app (may not work on all phones)</p>
-        <a class="pay-btn" href="{{ upi_link }}" id="upi-open">Open UPI app</a>
-        <a class="pay-btn" href="{{ android_intent_link }}">Open UPI (Android)</a>
-        <a class="pay-btn gpay" href="{{ gpay_link }}">Google Pay</a>
-        <a class="pay-btn phonepe" href="{{ phonepe_link }}">PhonePe</a>
-        <a class="pay-btn paytm" href="{{ paytm_link }}">Paytm</a>
+        <p class="hint">Or scan QR, then tap <strong>Pay with UPI now</strong> so stock &amp; admin Paid status update automatically.</p>
 
         <ul class="items">
             {% for item in items %}
@@ -212,27 +160,6 @@
             {% endfor %}
         </ul>
 
-        {% if order.paid %}
-        <div class="alert-ok">
-            <strong>Payment recorded.</strong> Admin sees Paid: Yes. Stock reduced.
-        </div>
-        <a class="pay-btn secondary" href="{% url 'shop:order_paid_success' order.id %}">View confirmation</a>
-        {% else %}
-        <div class="alert-ok">
-            Stock is reduced only after you confirm payment below (not when you only place the order).
-        </div>
-        <form method="post" action="{% url 'shop:order_confirm_paid' order.id %}" style="margin:1rem 0;">
-            {% csrf_token %}
-            <button type="submit" class="pay-btn confirm">
-                2) I paid successfully — confirm &amp; update stock
-            </button>
-        </form>
-        {% endif %}
-
-        <a class="pay-btn wa" id="whatsapp-order-btn" href="{{ whatsapp_url }}" target="_blank" rel="noopener">
-            Send order details on WhatsApp
-        </a>
-        <p class="hint">Opens WhatsApp with product name, size, qty, total, address and UPI details. Tap <strong>Send</strong>.</p>
         <a class="pay-btn secondary" href="{% url 'shop:home' %}">Back to shop</a>
     </div>
 </div>
@@ -243,21 +170,11 @@ function copyText(id, label) {
     var text = (el.innerText || el.textContent || '').replace('₹', '').trim();
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(text).then(function () {
-            alert(label + ' copied: ' + text + '\n\nNow open GPay/PhonePe and paste it.');
+            alert(label + ' copied: ' + text);
         });
     } else {
         prompt('Copy ' + label + ':', text);
     }
 }
-
-// After placing order: open WhatsApp with full product + order details
-{% if auto_open_whatsapp and whatsapp_url %}
-(function () {
-    var url = "{{ whatsapp_url|escapejs }}";
-    setTimeout(function () {
-        window.open(url, '_blank');
-    }, 600);
-})();
-{% endif %}
 </script>
 {% endblock %}

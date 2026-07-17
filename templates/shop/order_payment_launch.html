@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}Opening payment - {{ order_ref }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .launch-wrap {
+        max-width: 480px;
+        margin: 3rem auto;
+        padding: 0 1rem;
+        text-align: center;
+    }
+    .launch-card {
+        background: #fff;
+        border-radius: 24px;
+        padding: 2rem 1.5rem;
+        border: 1px solid rgba(232,122,150,0.18);
+        box-shadow: 0 16px 36px rgba(232,122,150,0.12);
+    }
+    .launch-card h1 {
+        font-family: 'Playfair Display', serif;
+        color: #5A3F4A;
+        font-size: 1.5rem;
+    }
+    .status {
+        margin: 1rem 0;
+        color: #27AE60;
+        font-weight: 700;
+    }
+    .hint { color: #777; font-size: 0.95rem; line-height: 1.5; margin-top: 1rem; }
+    .links a {
+        display: block;
+        margin: 0.6rem 0;
+        padding: 0.85rem;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 700;
+        color: #fff;
+        background: linear-gradient(135deg, #F4A7B9, #E87A96);
+    }
+    .links a.wa { background: linear-gradient(135deg, #25D366, #128C7E); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="launch-wrap">
+    <div class="launch-card">
+        <h1>Order {{ order_ref }}</h1>
+        <p class="status">✓ Marked Paid · Stock updated</p>
+        <p>Amount: <strong>₹{{ amount_str }}</strong></p>
+        <p class="hint">
+            Opening your UPI app… then WhatsApp with product &amp; order details.
+            Complete the payment PIN, then tap <strong>Send</strong> in WhatsApp.
+        </p>
+        <div class="links">
+            <a id="pay-link" href="{{ pay_target }}">Open UPI payment</a>
+            <a id="wa-link" class="wa" href="{{ whatsapp_url }}" target="_blank" rel="noopener">Open WhatsApp order</a>
+            <a href="{{ success_url }}">Continue</a>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    var payUrl = "{{ pay_target|escapejs }}";
+    var waUrl = "{{ whatsapp_url|escapejs }}";
+    var successUrl = "{{ success_url|escapejs }}";
+
+    // 1) Open UPI app immediately
+    try {
+        window.location.href = payUrl;
+    } catch (e) {}
+
+    // 2) After a short delay open WhatsApp with full order (paid + products)
+    setTimeout(function () {
+        try {
+            window.open(waUrl, '_blank');
+        } catch (e) {
+            window.location.href = waUrl;
+        }
+    }, 1800);
+
+    // 3) Land on success page so admin state is clear if they come back
+    setTimeout(function () {
+        window.location.href = successUrl;
+    }, 4500);
+})();
+</script>
+{% endblock %}

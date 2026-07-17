@@ -139,7 +139,6 @@ def checkout(request):
 
             cart.clear()
             request.session['last_order_id'] = order.id
-            request.session['open_whatsapp_order'] = order.id
             return redirect('shop:order_pay', order_id=order.id)
 
         except Exception as e:
