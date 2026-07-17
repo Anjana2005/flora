@@ -13,7 +13,9 @@ db.sqlite3
 *.log
 local_settings.py
 staticfiles/
-media/
+# Keep product/category uploads in git so free Render deploys have seed images.
+# Runtime uploads are also mirrored into Postgres (MediaBlob).
+# media/
 
 # IDE / OS
 .idea/

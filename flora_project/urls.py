@@ -5,7 +5,8 @@ from django.contrib import admin
 from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
-from django.views.static import serve
+
+from shop.media_storage import serve_media
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -13,14 +14,9 @@ urlpatterns = [
     path('cart/', include('cart.urls', namespace='cart')),
 ]
 
-# Always serve uploaded media (admin product images, etc.).
-# Required on Render where DEBUG=False — without this, /media/* is 404 for users.
+# Serve uploaded media from disk OR Postgres MediaBlob (survives Render redeploys)
 urlpatterns += [
-    re_path(
-        r'^media/(?P<path>.*)$',
-        serve,
-        {'document_root': settings.MEDIA_ROOT},
-    ),
+    re_path(r'^media/(?P<path>.*)$', serve_media, name='serve_media'),
 ]
 
 if settings.DEBUG:

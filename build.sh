@@ -8,6 +8,9 @@ python manage.py collectstatic --no-input
 
 python manage.py migrate
 
+# Mirror media/ files into Postgres so images survive ephemeral disk
+python manage.py sync_media_blobs
+
 # Create / update superuser (free-tier safe; no one-off jobs needed)
 python manage.py shell -c "
 from django.contrib.auth import get_user_model

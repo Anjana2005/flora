@@ -22,6 +22,37 @@ def _maybe_compress(image_field):
     return image_field
 
 
+def _persist_image(field_file):
+    """Store image bytes in DB so they survive Render redeploys."""
+    if not field_file:
+        return
+    try:
+        from .media_storage import persist_media_blob
+        persist_media_blob(field_file)
+    except Exception:
+        # Never break admin save if blob sync fails
+        pass
+
+
+class MediaBlob(models.Model):
+    """
+    Durable copy of uploaded media (Postgres).
+    Render free disk is ephemeral; this keeps product images available.
+    """
+    path = models.CharField(max_length=500, unique=True, db_index=True)
+    data = models.BinaryField()
+    content_type = models.CharField(max_length=100, default='image/jpeg')
+    size = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['path']
+
+    def __str__(self):
+        return f"MediaBlob({self.path}, {self.size} bytes)"
+
+
 class Order(models.Model):
     first_name = models.CharField(max_length=200)
     last_name = models.CharField(max_length=200, blank=True)
@@ -72,6 +103,7 @@ class Category(models.Model):
             self.slug = slugify(self.name)
         self.image = _maybe_compress(self.image)
         super().save(*args, **kwargs)
+        _persist_image(self.image)
 
     def get_absolute_url(self):
         return reverse('shop:product_list_by_category', args=[self.slug])
@@ -151,6 +183,7 @@ class ProductImage(models.Model):
     def save(self, *args, **kwargs):
         self.image = _maybe_compress(self.image)
         super().save(*args, **kwargs)
+        _persist_image(self.image)
 
 
 class OfferSale(models.Model):
@@ -173,6 +206,7 @@ class OfferSale(models.Model):
     def save(self, *args, **kwargs):
         self.image = _maybe_compress(self.image)
         super().save(*args, **kwargs)
+        _persist_image(self.image)
 
     def is_current(self):
         now = timezone.now()
@@ -293,3 +327,4 @@ class Blog(models.Model):
     def save(self, *args, **kwargs):
         self.image = _maybe_compress(self.image)
         super().save(*args, **kwargs)
+        _persist_image(self.image)
