@@ -457,7 +457,7 @@
                     <img id="main-image" src="{{ product.images.first.image.url }}" alt="{{ product.name }}">
                     <video id="main-video" controls playsinline style="display:none;width:100%;height:100%;object-fit:cover;border-radius:inherit;background:#111;"></video>
                 {% elif product.videos.all %}
-                    <video id="main-video" src="{{ product.videos.first.video.url }}" controls playsinline style="width:100%;height:100%;object-fit:cover;border-radius:inherit;background:#111;"></video>
+                    <video id="main-video" src="{{ product.videos.first.src }}" controls playsinline style="width:100%;height:100%;object-fit:cover;border-radius:inherit;background:#111;"></video>
                     <img id="main-image" alt="{{ product.name }}" style="display:none;">
                 {% else %}
                     <i class="fas fa-tshirt"></i>
@@ -473,9 +473,9 @@
                 {% endfor %}
                 {% for vid in product.videos.all %}
                 <div class="thumbnail {% if not product.images.all and forloop.first %}active{% endif %}"
-                     onclick="showProductVideo('{{ vid.video.url }}', this)"
+                     onclick="showProductVideo('{{ vid.src|escapejs }}', this)"
                      style="position:relative;">
-                    <video src="{{ vid.video.url }}" muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
+                    <video src="{{ vid.src }}" muted playsinline style="width:100%;height:100%;object-fit:cover;"></video>
                     <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.35);color:#fff;font-size:1.2rem;"><i class="fas fa-play"></i></span>
                 </div>
                 {% endfor %}

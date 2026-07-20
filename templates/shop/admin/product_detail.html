@@ -410,10 +410,8 @@
             <div class="images-section">
                 <h2><i class="fas fa-photo-video"></i> Product Images &amp; Videos</h2>
                 <p style="color:#666;margin:0 0 1rem;font-size:0.95rem;">
-                    Upload photos (JPG/PNG/WebP) and short videos (MP4 recommended).
-                    <strong>Max 15MB per video</strong> — larger files often cause Cloudflare
-                    <em>502 Bad Gateway</em> on free hosting. Compress reels before upload
-                    (phone edit → save as smaller quality).
+                    Upload <strong>photos only</strong> (JPG/PNG/WebP).
+                    Videos are <strong>not saved on this server</strong> — paste a hosted video link (mp4/webm URL) below.
                 </p>
 
                 {% if messages %}
@@ -427,9 +425,9 @@
                 <div class="image-upload">
                     <form id="media-upload-form" method="post" enctype="multipart/form-data" action="{% url 'shop:admin_product_add_media' id=product.id %}">
                         {% csrf_token %}
-                        <label for="media"><i class="fas fa-cloud-upload-alt"></i> Click to Upload Images or Videos</label>
-                        <input type="file" id="media" name="media" multiple accept="image/*,video/mp4,video/webm,video/quicktime,video/*">
-                        <p>or drag and drop images / videos here · multiple files OK</p>
+                        <label for="media"><i class="fas fa-cloud-upload-alt"></i> Click to Upload Images</label>
+                        <input type="file" id="media" name="media" multiple accept="image/*">
+                        <p>or drag and drop images here · photos only</p>
                     </form>
                 </div>
 
@@ -454,16 +452,25 @@
                     </div>
                 {% endif %}
 
-                <h3 style="margin:1.75rem 0 0.75rem;font-size:1.05rem;color:#5A3F4A;"><i class="fas fa-video"></i> Videos</h3>
+                <h3 style="margin:1.75rem 0 0.75rem;font-size:1.05rem;color:#5A3F4A;"><i class="fas fa-video"></i> Videos (link only)</h3>
+                <form method="post" action="{% url 'shop:admin_product_add_video_url' id=product.id %}" style="background:#FDECF1;padding:1rem;border-radius:12px;margin-bottom:1rem;">
+                    {% csrf_token %}
+                    <label for="video_url" style="display:block;font-weight:700;margin-bottom:0.4rem;color:#5A3F4A;">Add video URL</label>
+                    <input type="url" id="video_url" name="video_url" required placeholder="https://…/your-video.mp4" style="width:100%;padding:0.7rem;border:1px solid rgba(232,122,150,0.3);border-radius:8px;margin-bottom:0.6rem;">
+                    <input type="text" name="video_title" placeholder="Optional title" style="width:100%;padding:0.7rem;border:1px solid rgba(232,122,150,0.3);border-radius:8px;margin-bottom:0.6rem;">
+                    <button type="submit" class="btn-submit" style="width:auto;"><i class="fas fa-link"></i> Save video link</button>
+                    <p style="margin:0.6rem 0 0;font-size:0.85rem;color:#666;">Host the file on Drive (public), Cloudinary, Shopify CDN, etc. — only the link is stored here.</p>
+                </form>
                 {% if product.videos.all %}
                     <div class="images-grid">
                         {% for vid in product.videos.all %}
                             <div class="image-item" style="min-height:150px;">
-                                <video src="{{ vid.video.url }}" controls playsinline muted style="width:100%;height:150px;object-fit:cover;background:#111;display:block;"></video>
+                                <video src="{{ vid.src }}" controls playsinline muted style="width:100%;height:150px;object-fit:cover;background:#111;display:block;"></video>
+                                <div style="padding:0.4rem 0.5rem;font-size:0.75rem;word-break:break-all;color:#666;">{{ vid.video_url|truncatechars:60 }}</div>
                                 <div class="image-actions">
                                     <form method="post" action="{% url 'shop:admin_product_delete_video' id=vid.id %}" style="display: inline;">
                                         {% csrf_token %}
-                                        <button type="submit" class="btn-delete" onclick="return confirm('Delete this video?')"><i class="fas fa-trash"></i> Delete</button>
+                                        <button type="submit" class="btn-delete" onclick="return confirm('Remove this video link?')"><i class="fas fa-trash"></i> Delete</button>
                                     </form>
                                 </div>
                             </div>
@@ -471,7 +478,7 @@
                     </div>
                 {% else %}
                     <div class="no-images">
-                        <p><i class="fas fa-video"></i> No videos yet.</p>
+                        <p><i class="fas fa-video"></i> No video links yet.</p>
                     </div>
                 {% endif %}
             </div>
@@ -482,38 +489,6 @@
 <script>
     const uploadForm = document.getElementById('media-upload-form');
     const fileInput = document.getElementById('media');
-    const MAX_VIDEO_BYTES = 15 * 1024 * 1024; // must match server MAX_VIDEO_UPLOAD_BYTES
-
-    function isVideoFile(file) {
-        const name = (file.name || '').toLowerCase();
-        const type = (file.type || '').toLowerCase();
-        return type.startsWith('video/') || /\.(mp4|webm|mov|m4v|avi)$/.test(name);
-    }
-
-    function validateAndSubmit(files) {
-        if (!files || !files.length) return false;
-        const tooBig = [];
-        for (const f of files) {
-            if (isVideoFile(f) && f.size > MAX_VIDEO_BYTES) {
-                tooBig.push(`${f.name} (${(f.size / (1024 * 1024)).toFixed(1)}MB)`);
-            }
-        }
-        if (tooBig.length) {
-            alert(
-                'Video too large for free hosting (max 15MB each).\n\n' +
-                tooBig.join('\n') +
-                '\n\nCompress the video first, then upload again.\n' +
-                'Large videos cause Cloudflare 502 Bad Gateway.'
-            );
-            fileInput.value = '';
-            return false;
-        }
-        const label = uploadForm.querySelector('label');
-        if (label) {
-            label.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading… please wait';
-        }
-        return true;
-    }
 
     if (uploadForm && fileInput) {
         uploadForm.addEventListener('dragover', (e) => {
@@ -534,14 +509,12 @@
             uploadForm.style.opacity = '1';
             if (e.dataTransfer.files && e.dataTransfer.files.length) {
                 fileInput.files = e.dataTransfer.files;
-                if (validateAndSubmit(fileInput.files)) {
-                    uploadForm.submit();
-                }
+                uploadForm.submit();
             }
         });
 
         fileInput.addEventListener('change', () => {
-            if (fileInput.files.length > 0 && validateAndSubmit(fileInput.files)) {
+            if (fileInput.files.length > 0) {
                 uploadForm.submit();
             }
         });

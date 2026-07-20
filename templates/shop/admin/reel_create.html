@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Upload Style Reel - Flora Admin{% endblock %}
+{% block title %}Add Style Reel - Flora Admin{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -17,9 +17,9 @@
     .form-group { margin-bottom: 1.25rem; }
     .form-group label { display: block; font-weight: 700; margin-bottom: 0.45rem; color: #5A3F4A; }
     .form-group input[type="text"],
+    .form-group input[type="url"],
     .form-group input[type="number"],
-    .form-group select,
-    .form-group input[type="file"] {
+    .form-group select {
         width: 100%; padding: 0.75rem 0.9rem; border: 1px solid rgba(232,122,150,0.28);
         border-radius: 10px; font: inherit; background: #fff;
     }
@@ -47,20 +47,22 @@
         </aside>
 
         <div class="admin-content">
-            <h1><i class="fas fa-upload"></i> Upload Style Reel</h1>
-            <p class="hint">Add a short vertical video for the homepage carousel. MP4 works best on phones.</p>
+            <h1><i class="fas fa-link"></i> Add Style Reel (URL only)</h1>
+            <p class="hint">
+                Video files are <strong>not uploaded</strong> to this server.
+                Host the MP4 elsewhere and paste the public link here.
+            </p>
 
-            <form method="post" enctype="multipart/form-data">
+            <form method="post">
                 {% csrf_token %}
                 <div class="form-group">
-                    <label for="video">Video file *</label>
-                    <input type="file" id="video" name="video" accept="video/mp4,video/webm,video/quicktime,video/*" required>
-                    <small>MP4 / WebM / MOV · max 15MB (larger files cause 502 on free hosting)</small>
+                    <label for="video_url">Video URL *</label>
+                    <input type="url" id="video_url" name="video_url" required placeholder="https://…/video.mp4">
+                    <small>Direct mp4/webm link works best in the carousel</small>
                 </div>
                 <div class="form-group">
-                    <label for="poster">Poster image (optional)</label>
-                    <input type="file" id="poster" name="poster" accept="image/*">
-                    <small>Thumbnail shown before play. If empty, the browser uses the first video frame.</small>
+                    <label for="poster_url">Poster image URL (optional)</label>
+                    <input type="url" id="poster_url" name="poster_url" placeholder="https://…/thumb.jpg">
                 </div>
                 <div class="form-group">
                     <label for="title">Title (optional)</label>
@@ -87,7 +89,7 @@
                     </label>
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save reel</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save reel link</button>
                     <a href="{% url 'shop:admin_reels' %}" class="btn btn-secondary">Cancel</a>
                 </div>
             </form>

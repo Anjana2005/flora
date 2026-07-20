@@ -86,10 +86,10 @@ class OfferSaleAdmin(admin.ModelAdmin):
 
 @admin.register(StyleReel)
 class StyleReelAdmin(admin.ModelAdmin):
-    list_display = ['id', 'title', 'active', 'sort_order', 'product', 'created_at']
+    list_display = ['id', 'title', 'active', 'sort_order', 'product', 'video_url', 'created_at']
     list_filter = ['active', 'created_at']
     list_editable = ['active', 'sort_order']
-    search_fields = ['title', 'product__name']
+    search_fields = ['title', 'product__name', 'video_url']
     readonly_fields = ['created_at', 'updated_at']
     autocomplete_fields = ['product']
 

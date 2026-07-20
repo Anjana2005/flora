@@ -292,9 +292,15 @@ class ProductImage(models.Model):
 
 
 class ProductVideo(models.Model):
-    """Product videos managed by admin (mp4/webm/mov). Stored in MediaBlob on Render."""
+    """
+    Product video link managed by admin.
+    Only stores an external URL — video files are NOT saved on the server.
+    """
     product = models.ForeignKey(Product, related_name='videos', on_delete=models.CASCADE)
-    video = models.FileField(upload_to='products/videos/')
+    video_url = models.URLField(
+        max_length=500,
+        help_text='Direct video link (mp4/webm) or hosted URL — not uploaded to this server',
+    )
     title = models.CharField(max_length=200, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -304,20 +310,28 @@ class ProductVideo(models.Model):
     def __str__(self):
         return f"Video for {self.product.name}"
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        # Persist full file in Postgres (same path as images) for free Render
-        _persist_image(self.video)
+    @property
+    def src(self):
+        """URL used by templates for <video src>."""
+        return self.video_url or ''
 
 
 class StyleReel(models.Model):
     """
-    Homepage Style reels — uploaded and managed from the staff dashboard.
-    Stored via FileField + MediaBlob so videos survive Render redeploys.
+    Homepage Style reels — managed from the staff dashboard.
+    Only stores an external video URL (no video file on this server).
     """
     title = models.CharField(max_length=200, blank=True, default='')
-    video = models.FileField(upload_to='reels/')
-    poster = models.ImageField(upload_to='reels/posters/', blank=True, null=True)
+    video_url = models.URLField(
+        max_length=500,
+        help_text='Direct video link (mp4/webm). Files are not uploaded to this server.',
+    )
+    poster_url = models.URLField(
+        max_length=500,
+        blank=True,
+        default='',
+        help_text='Optional thumbnail image URL',
+    )
     product = models.ForeignKey(
         Product,
         related_name='style_reels',
@@ -340,14 +354,12 @@ class StyleReel(models.Model):
         verbose_name_plural = 'style reels'
 
     def __str__(self):
-        label = self.title or (self.video.name if self.video else f'Reel #{self.pk}')
+        label = self.title or self.video_url or f'Reel #{self.pk}'
         return f"StyleReel: {label}"
 
-    def save(self, *args, **kwargs):
-        self.poster = _maybe_compress(self.poster)
-        super().save(*args, **kwargs)
-        _persist_image(self.video)
-        _persist_image(self.poster)
+    @property
+    def src(self):
+        return self.video_url or ''
 
 
 class OfferSale(models.Model):

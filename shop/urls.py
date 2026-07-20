@@ -37,6 +37,7 @@ urlpatterns = [
     path('dashboard/products/<int:id>/add-image/', views.admin_product_add_image, name='admin_product_add_image'),
     path('dashboard/products/<int:id>/add-media/', views.admin_product_add_image, name='admin_product_add_media'),
     path('dashboard/products/image/<int:id>/delete/', views.admin_product_delete_image, name='admin_product_delete_image'),
+    path('dashboard/products/<int:id>/add-video-url/', views.admin_product_add_video_url, name='admin_product_add_video_url'),
     path('dashboard/products/video/<int:id>/delete/', views.admin_product_delete_video, name='admin_product_delete_video'),
     path('dashboard/categories/', views.admin_categories, name='admin_categories'),
     path('dashboard/categories/create/', views.admin_category_create, name='admin_category_create'),

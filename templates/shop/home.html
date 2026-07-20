@@ -609,11 +609,11 @@
             <div class="swiper-wrapper">
                 {% for reel in style_reels %}
                 <div class="swiper-slide">
-                    <div class="reel-card" data-video="{{ reel.video.url }}" tabindex="0" role="button" aria-label="{{ reel.title|default:'Play style reel' }}">
+                    <div class="reel-card" data-video="{{ reel.src }}" tabindex="0" role="button" aria-label="{{ reel.title|default:'Play style reel' }}">
                         <span class="reel-badge"><i class="fas fa-circle"></i> REEL</span>
                         <video muted loop playsinline preload="metadata" autoplay
-                            {% if reel.poster %}poster="{{ reel.poster.url }}"{% endif %}>
-                            <source src="{{ reel.video.url }}" type="video/mp4">
+                            {% if reel.poster_url %}poster="{{ reel.poster_url }}"{% endif %}>
+                            <source src="{{ reel.src }}" type="video/mp4">
                         </video>
                         <span class="reel-play" aria-hidden="true"><i class="fas fa-play"></i></span>
                     </div>

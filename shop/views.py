@@ -695,26 +695,37 @@ def admin_product_create(request):
                         available=quantity > 0
                     )
             
-            # Handle image + video uploads
-            from .models import ProductVideo
-            media_files = list(request.FILES.getlist('images')) + list(request.FILES.getlist('videos')) + list(request.FILES.getlist('media'))
-            img_n = vid_n = 0
+            # Images only (videos are external URLs — add on product detail)
+            media_files = (
+                list(request.FILES.getlist('images'))
+                + list(request.FILES.getlist('media'))
+            )
+            img_n = 0
             for f in media_files:
                 if not f:
                     continue
                 ctype = (getattr(f, 'content_type', None) or '').lower()
                 name = (getattr(f, 'name', '') or '').lower()
-                is_video = ctype.startswith('video/') or name.endswith(('.mp4', '.webm', '.mov', '.m4v', '.avi'))
-                if is_video:
-                    ProductVideo.objects.create(product=product, video=f, title=getattr(f, 'name', '')[:200])
-                    vid_n += 1
-                else:
-                    ProductImage.objects.create(product=product, image=f)
-                    img_n += 1
+                if ctype.startswith('video/') or name.endswith(
+                    ('.mp4', '.webm', '.mov', '.m4v', '.avi')
+                ):
+                    continue  # never save video files on the server
+                ProductImage.objects.create(product=product, image=f)
+                img_n += 1
+
+            # Optional external video URL on create
+            from .models import ProductVideo
+            video_url = (request.POST.get('video_url') or '').strip()
+            if video_url:
+                ProductVideo.objects.create(
+                    product=product,
+                    video_url=video_url[:500],
+                    title=(request.POST.get('video_title') or '')[:200],
+                )
 
             messages.success(
                 request,
-                f'Product created successfully! ({img_n} image(s), {vid_n} video(s))',
+                f'Product created successfully! ({img_n} image(s))',
             )
             return redirect('shop:admin_product_detail', id=product.id)
         except Exception as e:
@@ -866,7 +877,7 @@ def admin_category_delete(request, id):
 
 @login_required(login_url='shop:login')
 def admin_product_add_image(request, id):
-    """Add images and/or videos to a product (Manage Products admin)."""
+    """Add product images only (video files are never saved on the server)."""
     if not request.user.is_staff:
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('shop:home')
@@ -875,66 +886,70 @@ def admin_product_add_image(request, id):
 
     if request.method == 'POST':
         try:
-            from .models import ProductImage, ProductVideo
+            from .models import ProductImage
 
             files = []
-            for key in ('media', 'images', 'videos', 'video'):
+            for key in ('media', 'images'):
                 files.extend(request.FILES.getlist(key))
 
             if not files:
-                messages.warning(request, 'No files selected. Choose images or videos to upload.')
+                messages.warning(request, 'No images selected.')
             else:
-                img_n = vid_n = 0
+                img_n = skipped_vid = 0
                 for f in files:
                     if not f:
                         continue
                     ctype = (getattr(f, 'content_type', None) or '').lower()
                     name = (getattr(f, 'name', '') or '').lower()
-                    is_video = ctype.startswith('video/') or name.endswith(
+                    if ctype.startswith('video/') or name.endswith(
                         ('.mp4', '.webm', '.mov', '.m4v', '.avi')
-                    )
-                    if is_video:
-                        # Free-tier safe limit (Cloudflare/Render 502 if too large/slow)
-                        from django.conf import settings as dj_settings
-                        max_vid = int(getattr(dj_settings, 'MAX_VIDEO_UPLOAD_BYTES', 15 * 1024 * 1024))
-                        size = getattr(f, 'size', 0) or 0
-                        if size > max_vid:
-                            mb = max_vid // (1024 * 1024)
-                            messages.warning(
-                                request,
-                                f'Skipped {getattr(f, "name", "video")}: max {mb}MB per video '
-                                f'(compress in phone gallery / CapCut first).',
-                            )
-                            continue
-                        try:
-                            ProductVideo.objects.create(
-                                product=product,
-                                video=f,
-                                title=(getattr(f, 'name', '') or '')[:200],
-                            )
-                            vid_n += 1
-                        except Exception as ve:
-                            messages.error(
-                                request,
-                                f'Could not save video {getattr(f, "name", "")}: {ve}. '
-                                f'Try a shorter/compressed MP4 under 15MB.',
-                            )
-                    else:
-                        ProductImage.objects.create(product=product, image=f)
-                        img_n += 1
+                    ):
+                        skipped_vid += 1
+                        continue
+                    ProductImage.objects.create(product=product, image=f)
+                    img_n += 1
 
-                if img_n or vid_n:
-                    messages.success(
+                if img_n:
+                    messages.success(request, f'Uploaded {img_n} image(s) successfully!')
+                if skipped_vid:
+                    messages.warning(
                         request,
-                        f'Uploaded {img_n} image(s) and {vid_n} video(s) successfully!',
+                        'Video files are not saved on the server. '
+                        'Paste a video link in “Add video URL” below instead.',
                     )
-                else:
-                    messages.warning(request, 'No valid image or video files uploaded.')
+                if not img_n and not skipped_vid:
+                    messages.warning(request, 'No valid image files uploaded.')
         except Exception as e:
-            messages.error(
-                request,
-                f'Error uploading media: {e}. If you saw 502, use a smaller video (under 15MB).',
+            messages.error(request, f'Error uploading images: {e}')
+
+    return redirect('shop:admin_product_detail', id=product.id)
+
+
+@login_required(login_url='shop:login')
+def admin_product_add_video_url(request, id):
+    """Add an external video URL to a product (no file upload)."""
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('shop:home')
+
+    product = get_object_or_404(Product, id=id)
+
+    if request.method == 'POST':
+        from .models import ProductVideo
+
+        video_url = (request.POST.get('video_url') or '').strip()
+        title = (request.POST.get('video_title') or '').strip()[:200]
+        if not video_url:
+            messages.error(request, 'Paste a video URL (mp4/webm link).')
+        elif not (video_url.startswith('http://') or video_url.startswith('https://')):
+            messages.error(request, 'Video URL must start with http:// or https://')
+        else:
+            ProductVideo.objects.create(
+                product=product,
+                video_url=video_url[:500],
+                title=title,
             )
+            messages.success(request, 'Video link added (not stored as a file on this server).')
 
     return redirect('shop:admin_product_detail', id=product.id)
 
@@ -1296,7 +1311,7 @@ def admin_reels(request):
 
 @login_required(login_url='shop:login')
 def admin_reel_create(request):
-    """Staff dashboard: upload a new homepage Style reel."""
+    """Staff dashboard: add a homepage Style reel via external URL (no file save)."""
     if not request.user.is_staff:
         messages.error(request, 'You do not have permission to access this page.')
         return redirect('shop:home')
@@ -1304,8 +1319,8 @@ def admin_reel_create(request):
     products = Product.objects.filter(available=True).order_by('name')
 
     if request.method == 'POST':
-        video = request.FILES.get('video')
-        poster = request.FILES.get('poster')
+        video_url = (request.POST.get('video_url') or '').strip()
+        poster_url = (request.POST.get('poster_url') or '').strip()
         title = (request.POST.get('title') or '').strip()[:200]
         active = request.POST.get('active') == 'on'
         product_id = request.POST.get('product') or ''
@@ -1314,25 +1329,11 @@ def admin_reel_create(request):
         except (TypeError, ValueError):
             sort_order = 0
 
-        if not video:
-            messages.error(request, 'A video file is required (MP4/WebM/MOV).')
+        if not video_url:
+            messages.error(request, 'Paste a video URL (direct mp4/webm link).')
             return redirect('shop:admin_reel_create')
-
-        name = (getattr(video, 'name', '') or '').lower()
-        ctype = (getattr(video, 'content_type', '') or '').lower()
-        is_video = ctype.startswith('video/') or name.endswith(('.mp4', '.webm', '.mov', '.m4v'))
-        if not is_video:
-            messages.error(request, 'Please upload a video file (MP4, WebM, or MOV).')
-            return redirect('shop:admin_reel_create')
-
-        from django.conf import settings as dj_settings
-        max_bytes = int(getattr(dj_settings, 'MAX_VIDEO_UPLOAD_BYTES', 15 * 1024 * 1024))
-        if getattr(video, 'size', 0) and video.size > max_bytes:
-            mb = max_bytes // (1024 * 1024)
-            messages.error(
-                request,
-                f'Video is too large. Max {mb}MB per reel (compress first to avoid 502 errors).',
-            )
+        if not (video_url.startswith('http://') or video_url.startswith('https://')):
+            messages.error(request, 'Video URL must start with http:// or https://')
             return redirect('shop:admin_reel_create')
 
         product = None
@@ -1341,13 +1342,16 @@ def admin_reel_create(request):
 
         StyleReel.objects.create(
             title=title,
-            video=video,
-            poster=poster,
+            video_url=video_url[:500],
+            poster_url=poster_url[:500] if poster_url else '',
             product=product,
             active=active,
             sort_order=max(0, sort_order),
         )
-        messages.success(request, 'Style reel uploaded! It will show on the homepage when Active.')
+        messages.success(
+            request,
+            'Style reel saved as a link only (video file is not stored on this server).',
+        )
         return redirect('shop:admin_reels')
 
     return render(request, 'shop/admin/reel_create.html', {'products': products})

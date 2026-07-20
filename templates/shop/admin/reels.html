@@ -53,11 +53,11 @@
         <div class="admin-content">
             <div class="page-header">
                 <h1><i class="fas fa-film"></i> Style Reels</h1>
-                <a href="{% url 'shop:admin_reel_create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Upload reel</a>
+                <a href="{% url 'shop:admin_reel_create' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Add reel link</a>
             </div>
             <p class="hint">
-                These videos appear in the homepage <strong>Style reels</strong> carousel.
-                Upload short vertical clips (MP4 recommended, max 45MB). Toggle Active to show/hide without deleting.
+                These appear in the homepage <strong>Style reels</strong> carousel.
+                Only <strong>external video URLs</strong> are stored — files are not saved on this server.
                 Total: <strong>{{ total_count }}</strong>
             </p>
 
@@ -65,8 +65,8 @@
             <div class="reels-grid">
                 {% for reel in reels %}
                 <div class="reel-admin-card">
-                    <video src="{{ reel.video.url }}" controls playsinline muted preload="metadata"
-                        {% if reel.poster %}poster="{{ reel.poster.url }}"{% endif %}></video>
+                    <video src="{{ reel.src }}" controls playsinline muted preload="metadata"
+                        {% if reel.poster_url %}poster="{{ reel.poster_url }}"{% endif %}></video>
                     <div class="reel-admin-meta">
                         <h3>{{ reel.title|default:"Untitled reel" }}</h3>
                         <p>
@@ -103,7 +103,7 @@
             <div class="empty">
                 <p style="margin-bottom:1rem;"><i class="fas fa-film" style="font-size:2rem;color:#E87A96;"></i></p>
                 <p>No style reels yet. Upload your first video for the homepage.</p>
-                <a href="{% url 'shop:admin_reel_create' %}" class="btn btn-primary" style="margin-top:1rem;"><i class="fas fa-plus"></i> Upload reel</a>
+                <a href="{% url 'shop:admin_reel_create' %}" class="btn btn-primary" style="margin-top:1rem;"><i class="fas fa-plus"></i> Add reel link</a>
             </div>
             {% endif %}
         </div>

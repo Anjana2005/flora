@@ -9,8 +9,8 @@
         <p style="color:var(--text-light);margin-bottom:1.25rem;">
             <strong>{{ reel.title|default:"Untitled reel" }}</strong> will be removed from the homepage permanently.
         </p>
-        {% if reel.video %}
-        <video src="{{ reel.video.url }}" controls playsinline muted style="width:100%;max-height:320px;border-radius:12px;background:#111;margin-bottom:1.25rem;"></video>
+        {% if reel.src %}
+        <video src="{{ reel.src }}" controls playsinline muted style="width:100%;max-height:320px;border-radius:12px;background:#111;margin-bottom:1.25rem;"></video>
         {% endif %}
         <form method="post" style="display:flex;gap:0.75rem;flex-wrap:wrap;">
             {% csrf_token %}
