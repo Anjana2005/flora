@@ -287,55 +287,182 @@
         border: 1px solid rgba(232,122,150,0.12);
     }
 
-    .video-carousel-section {
+    /* Reels-style video gallery (inspired by shop video carousels) */
+    .reels-section {
         max-width: 1240px;
         margin: 2rem auto 0;
-        padding: 0 1.25rem 1rem;
+        padding: 0 1.25rem 0.5rem;
     }
 
-    .video-carousel {
+    .reels-shell {
         position: relative;
         border-radius: 28px;
-        overflow: hidden;
-        border: 1px solid rgba(232,122,150,0.14);
-        background: white;
+        background: linear-gradient(180deg, #FFFFFF 0%, #FFF7FA 100%);
+        border: 1px solid rgba(232,122,150,0.16);
         box-shadow: 0 16px 36px rgba(232,122,150,0.10);
+        padding: 1rem 0.6rem 1.25rem;
+        overflow: hidden;
     }
 
-    .video-track {
-        display: flex;
-        gap: 0.8rem;
-        overflow-x: auto;
-        scroll-behavior: smooth;
-        padding: 0.9rem;
+    .reels-swiper {
+        padding: 0.25rem 2.6rem 0.5rem;
+        overflow: hidden;
     }
 
-    .video-track video {
-        width: min(280px, 70vw);
-        height: 360px;
+    .reels-swiper .swiper-slide {
+        width: 220px;
+        height: auto;
+    }
+
+    .reel-card {
+        position: relative;
+        border-radius: 18px;
+        overflow: hidden;
+        background: #1a1216;
+        aspect-ratio: 9 / 16;
+        box-shadow: 0 12px 28px rgba(90, 63, 74, 0.16);
+        cursor: pointer;
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .reel-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 18px 36px rgba(232, 122, 150, 0.28);
+    }
+
+    .reel-card video {
+        width: 100%;
+        height: 100%;
         object-fit: cover;
-        border-radius: 20px;
-        background: #FDECF1;
-        flex: 0 0 auto;
+        display: block;
+        background: #2a1f24;
     }
 
-    .nav-arrow {
+    .reel-card::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.45) 100%);
+        pointer-events: none;
+        opacity: 0.85;
+    }
+
+    .reel-badge {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 2;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: rgba(0,0,0,0.45);
+        color: #fff;
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        padding: 0.28rem 0.55rem;
+        border-radius: 999px;
+        backdrop-filter: blur(6px);
+    }
+
+    .reel-badge i { font-size: 0.65rem; color: #F4A7B9; }
+
+    .reel-play {
+        position: absolute;
+        right: 10px;
+        bottom: 10px;
+        z-index: 2;
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: none;
+        display: grid;
+        place-items: center;
+        background: rgba(255,255,255,0.92);
+        color: #D46A8A;
+        box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+        pointer-events: none;
+    }
+
+    .reels-nav {
         position: absolute;
         top: 50%;
         transform: translateY(-50%);
-        z-index: 2;
+        z-index: 5;
         width: 42px;
         height: 42px;
         border: none;
         border-radius: 50%;
-        background: rgba(255,255,255,0.92);
+        background: rgba(255,255,255,0.96);
         color: #D46A8A;
-        box-shadow: 0 8px 18px rgba(90,63,74,0.12);
+        box-shadow: 0 8px 18px rgba(90,63,74,0.14);
         cursor: pointer;
+        display: grid;
+        place-items: center;
+        transition: background 0.2s ease, color 0.2s ease;
     }
 
-    .nav-arrow.left { left: 12px; }
-    .nav-arrow.right { right: 12px; }
+    .reels-nav:hover {
+        background: #E87A96;
+        color: #fff;
+    }
+
+    .reels-nav.prev { left: 10px; }
+    .reels-nav.next { right: 10px; }
+
+    .reels-nav.swiper-button-disabled {
+        opacity: 0.35;
+        pointer-events: none;
+    }
+
+    /* Fullscreen lightbox for a selected reel */
+    .reel-lightbox {
+        position: fixed;
+        inset: 0;
+        z-index: 4000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(20, 12, 16, 0.88);
+        padding: 1rem;
+        backdrop-filter: blur(6px);
+    }
+
+    .reel-lightbox.is-open { display: flex; }
+
+    .reel-lightbox-inner {
+        position: relative;
+        width: min(380px, 92vw);
+        max-height: 90vh;
+        border-radius: 22px;
+        overflow: hidden;
+        background: #000;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    }
+
+    .reel-lightbox-inner video {
+        width: 100%;
+        max-height: 90vh;
+        display: block;
+        object-fit: contain;
+        background: #000;
+    }
+
+    .reel-lightbox-close {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 2;
+        width: 38px;
+        height: 38px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.94);
+        color: #5A3F4A;
+        font-size: 1.35rem;
+        cursor: pointer;
+        line-height: 1;
+    }
 
     @media (max-width: 980px) {
         .bloom-hero,
@@ -384,11 +511,12 @@
         .section-head { flex-direction: column; align-items: start; }
         .story-band { padding: 0 0.9rem; }
         .story-card { padding: 1.2rem; }
-        .video-carousel-section { padding: 0 0.9rem 1rem; }
-        .video-track video {
-            width: min(260px, 78vw);
-            height: 300px;
-        }
+        .reels-section { padding: 0 0.9rem 0.5rem; }
+        .reels-swiper { padding: 0.15rem 2.2rem 0.4rem; }
+        .reels-swiper .swiper-slide { width: 170px; }
+        .reels-nav { width: 36px; height: 36px; }
+        .reels-nav.prev { left: 6px; }
+        .reels-nav.next { right: 6px; }
     }
 </style>
 {% endblock %}
@@ -461,6 +589,98 @@
     </div>
 </section>
 
+<section class="reels-section" aria-label="Flora style reels">
+    <div class="section-head" style="padding: 0 0 0.9rem;">
+        <div>
+            <h2>Style reels</h2>
+            <p>Swipe through looks from the Flora collection</p>
+        </div>
+        <a class="section-link" href="{% url 'shop:product_list' %}">Shop looks →</a>
+    </div>
+    <div class="reels-shell">
+        <button type="button" class="reels-nav prev" aria-label="Previous reels">
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        <button type="button" class="reels-nav next" aria-label="Next reels">
+            <i class="fas fa-chevron-right"></i>
+        </button>
+        <div class="reels-swiper swiper">
+            <div class="swiper-wrapper">
+                <div class="swiper-slide">
+                    <div class="reel-card" data-video="{% static 'videos/video1.mp4' %}" tabindex="0" role="button" aria-label="Play style reel 1">
+                        <span class="reel-badge"><i class="fas fa-circle"></i> REEL</span>
+                        <video muted loop playsinline preload="metadata" autoplay poster="{% static 'images/image1.jpg' %}">
+                            <source src="{% static 'videos/video1.mp4' %}" type="video/mp4">
+                        </video>
+                        <span class="reel-play" aria-hidden="true"><i class="fas fa-play"></i></span>
+                    </div>
+                </div>
+                <div class="swiper-slide">
+                    <div class="reel-card" data-video="{% static 'videos/video2.mp4' %}" tabindex="0" role="button" aria-label="Play style reel 2">
+                        <span class="reel-badge"><i class="fas fa-circle"></i> REEL</span>
+                        <video muted loop playsinline preload="metadata" autoplay poster="{% static 'images/image2.jpg' %}">
+                            <source src="{% static 'videos/video2.mp4' %}" type="video/mp4">
+                        </video>
+                        <span class="reel-play" aria-hidden="true"><i class="fas fa-play"></i></span>
+                    </div>
+                </div>
+                <div class="swiper-slide">
+                    <div class="reel-card" data-video="{% static 'videos/video3.mp4' %}" tabindex="0" role="button" aria-label="Play style reel 3">
+                        <span class="reel-badge"><i class="fas fa-circle"></i> REEL</span>
+                        <video muted loop playsinline preload="metadata" autoplay poster="{% static 'images/image3.jpg' %}">
+                            <source src="{% static 'videos/video3.mp4' %}" type="video/mp4">
+                        </video>
+                        <span class="reel-play" aria-hidden="true"><i class="fas fa-play"></i></span>
+                    </div>
+                </div>
+                <div class="swiper-slide">
+                    <div class="reel-card" data-video="{% static 'videos/video4.mp4' %}" tabindex="0" role="button" aria-label="Play style reel 4">
+                        <span class="reel-badge"><i class="fas fa-circle"></i> REEL</span>
+                        <video muted loop playsinline preload="metadata" autoplay poster="{% static 'images/image4.jpg' %}">
+                            <source src="{% static 'videos/video4.mp4' %}" type="video/mp4">
+                        </video>
+                        <span class="reel-play" aria-hidden="true"><i class="fas fa-play"></i></span>
+                    </div>
+                </div>
+                <div class="swiper-slide">
+                    <div class="reel-card" data-video="{% static 'videos/video5.mp4' %}" tabindex="0" role="button" aria-label="Play style reel 5">
+                        <span class="reel-badge"><i class="fas fa-circle"></i> REEL</span>
+                        <video muted loop playsinline preload="metadata" autoplay poster="{% static 'images/customers1.jpeg' %}">
+                            <source src="{% static 'videos/video5.mp4' %}" type="video/mp4">
+                        </video>
+                        <span class="reel-play" aria-hidden="true"><i class="fas fa-play"></i></span>
+                    </div>
+                </div>
+                <div class="swiper-slide">
+                    <div class="reel-card" data-video="{% static 'videos/video6.mp4' %}" tabindex="0" role="button" aria-label="Play style reel 6">
+                        <span class="reel-badge"><i class="fas fa-circle"></i> REEL</span>
+                        <video muted loop playsinline preload="metadata" autoplay poster="{% static 'images/customers2.jpeg' %}">
+                            <source src="{% static 'videos/video6.mp4' %}" type="video/mp4">
+                        </video>
+                        <span class="reel-play" aria-hidden="true"><i class="fas fa-play"></i></span>
+                    </div>
+                </div>
+                <div class="swiper-slide">
+                    <div class="reel-card" data-video="{% static 'videos/video7.mp4' %}" tabindex="0" role="button" aria-label="Play style reel 7">
+                        <span class="reel-badge"><i class="fas fa-circle"></i> REEL</span>
+                        <video muted loop playsinline preload="metadata" autoplay poster="{% static 'images/happycustomers.png' %}">
+                            <source src="{% static 'videos/video7.mp4' %}" type="video/mp4">
+                        </video>
+                        <span class="reel-play" aria-hidden="true"><i class="fas fa-play"></i></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div class="reel-lightbox" id="reelLightbox" aria-hidden="true">
+    <div class="reel-lightbox-inner">
+        <button type="button" class="reel-lightbox-close" id="reelLightboxClose" aria-label="Close video">&times;</button>
+        <video id="reelLightboxVideo" controls playsinline></video>
+    </div>
+</div>
+
 {% if featured_products %}
 <section class="section-wrap">
     <div class="section-head">
@@ -525,6 +745,85 @@
         pagination: { el: '.swiper-pagination', clickable: true }
     });
 
+    const reelsSwiper = new Swiper('.reels-swiper', {
+        slidesPerView: 'auto',
+        spaceBetween: 14,
+        freeMode: true,
+        grabCursor: true,
+        loop: false,
+        navigation: {
+            nextEl: '.reels-nav.next',
+            prevEl: '.reels-nav.prev'
+        },
+        breakpoints: {
+            0: { spaceBetween: 10 },
+            640: { spaceBetween: 12 },
+            980: { spaceBetween: 16 }
+        }
+    });
+
+    // Keep muted reels playing when visible; pause when off-screen
+    const reelVideos = document.querySelectorAll('.reel-card video');
+    if ('IntersectionObserver' in window && reelVideos.length) {
+        const reelObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                const video = entry.target;
+                if (entry.isIntersecting) {
+                    video.play().catch(() => {});
+                } else {
+                    video.pause();
+                }
+            });
+        }, { threshold: 0.35 });
+        reelVideos.forEach((video) => reelObserver.observe(video));
+    } else {
+        reelVideos.forEach((video) => video.play().catch(() => {}));
+    }
+
+    // Lightbox for fullscreen reel playback with sound
+    const lightbox = document.getElementById('reelLightbox');
+    const lightboxVideo = document.getElementById('reelLightboxVideo');
+    const lightboxClose = document.getElementById('reelLightboxClose');
+
+    function openReelLightbox(src) {
+        if (!lightbox || !lightboxVideo || !src) return;
+        lightboxVideo.src = src;
+        lightbox.classList.add('is-open');
+        lightbox.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+        lightboxVideo.play().catch(() => {});
+    }
+
+    function closeReelLightbox() {
+        if (!lightbox || !lightboxVideo) return;
+        lightbox.classList.remove('is-open');
+        lightbox.setAttribute('aria-hidden', 'true');
+        lightboxVideo.pause();
+        lightboxVideo.removeAttribute('src');
+        lightboxVideo.load();
+        document.body.style.overflow = '';
+    }
+
+    document.querySelectorAll('.reel-card').forEach((card) => {
+        card.addEventListener('click', () => openReelLightbox(card.dataset.video));
+        card.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                openReelLightbox(card.dataset.video);
+            }
+        });
+    });
+
+    if (lightboxClose) lightboxClose.addEventListener('click', closeReelLightbox);
+    if (lightbox) {
+        lightbox.addEventListener('click', (event) => {
+            if (event.target === lightbox) closeReelLightbox();
+        });
+    }
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeReelLightbox();
+    });
+
     const offerBanner = document.getElementById('offerBanner');
     if (offerBanner) {
         const closeBtn = offerBanner.querySelector('.close-offer');
@@ -533,12 +832,6 @@
                 offerBanner.style.display = 'none';
             });
         }
-    }
-
-    function slide(direction) {
-        const track = document.getElementById('videoTrack');
-        if (!track) return;
-        track.scrollBy({ left: direction * 300, behavior: 'smooth' });
     }
 </script>
 {% endblock %}
