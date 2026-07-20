@@ -894,20 +894,31 @@ def admin_product_add_image(request, id):
                         ('.mp4', '.webm', '.mov', '.m4v', '.avi')
                     )
                     if is_video:
-                        # Soft size guard (~45MB) for free hosting
+                        # Free-tier safe limit (Cloudflare/Render 502 if too large/slow)
+                        from django.conf import settings as dj_settings
+                        max_vid = int(getattr(dj_settings, 'MAX_VIDEO_UPLOAD_BYTES', 15 * 1024 * 1024))
                         size = getattr(f, 'size', 0) or 0
-                        if size > 45 * 1024 * 1024:
+                        if size > max_vid:
+                            mb = max_vid // (1024 * 1024)
                             messages.warning(
                                 request,
-                                f'Skipped {getattr(f, "name", "video")}: max 45MB per video.',
+                                f'Skipped {getattr(f, "name", "video")}: max {mb}MB per video '
+                                f'(compress in phone gallery / CapCut first).',
                             )
                             continue
-                        ProductVideo.objects.create(
-                            product=product,
-                            video=f,
-                            title=(getattr(f, 'name', '') or '')[:200],
-                        )
-                        vid_n += 1
+                        try:
+                            ProductVideo.objects.create(
+                                product=product,
+                                video=f,
+                                title=(getattr(f, 'name', '') or '')[:200],
+                            )
+                            vid_n += 1
+                        except Exception as ve:
+                            messages.error(
+                                request,
+                                f'Could not save video {getattr(f, "name", "")}: {ve}. '
+                                f'Try a shorter/compressed MP4 under 15MB.',
+                            )
                     else:
                         ProductImage.objects.create(product=product, image=f)
                         img_n += 1
@@ -920,7 +931,10 @@ def admin_product_add_image(request, id):
                 else:
                     messages.warning(request, 'No valid image or video files uploaded.')
         except Exception as e:
-            messages.error(request, f'Error uploading media: {str(e)}')
+            messages.error(
+                request,
+                f'Error uploading media: {e}. If you saw 502, use a smaller video (under 15MB).',
+            )
 
     return redirect('shop:admin_product_detail', id=product.id)
 
@@ -1311,10 +1325,14 @@ def admin_reel_create(request):
             messages.error(request, 'Please upload a video file (MP4, WebM, or MOV).')
             return redirect('shop:admin_reel_create')
 
-        # Keep under free-tier friendly size (same limit as product videos)
-        max_bytes = 45 * 1024 * 1024
+        from django.conf import settings as dj_settings
+        max_bytes = int(getattr(dj_settings, 'MAX_VIDEO_UPLOAD_BYTES', 15 * 1024 * 1024))
         if getattr(video, 'size', 0) and video.size > max_bytes:
-            messages.error(request, 'Video is too large. Max 45MB per reel.')
+            mb = max_bytes // (1024 * 1024)
+            messages.error(
+                request,
+                f'Video is too large. Max {mb}MB per reel (compress first to avoid 502 errors).',
+            )
             return redirect('shop:admin_reel_create')
 
         product = None

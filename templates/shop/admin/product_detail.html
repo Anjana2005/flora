@@ -410,8 +410,10 @@
             <div class="images-section">
                 <h2><i class="fas fa-photo-video"></i> Product Images &amp; Videos</h2>
                 <p style="color:#666;margin:0 0 1rem;font-size:0.95rem;">
-                    Upload photos (JPG/PNG/WebP) and short videos (MP4/WebM/MOV, max ~45MB each).
-                    Files are saved so they keep working after site redeploys.
+                    Upload photos (JPG/PNG/WebP) and short videos (MP4 recommended).
+                    <strong>Max 15MB per video</strong> — larger files often cause Cloudflare
+                    <em>502 Bad Gateway</em> on free hosting. Compress reels before upload
+                    (phone edit → save as smaller quality).
                 </p>
 
                 {% if messages %}
@@ -480,6 +482,38 @@
 <script>
     const uploadForm = document.getElementById('media-upload-form');
     const fileInput = document.getElementById('media');
+    const MAX_VIDEO_BYTES = 15 * 1024 * 1024; // must match server MAX_VIDEO_UPLOAD_BYTES
+
+    function isVideoFile(file) {
+        const name = (file.name || '').toLowerCase();
+        const type = (file.type || '').toLowerCase();
+        return type.startsWith('video/') || /\.(mp4|webm|mov|m4v|avi)$/.test(name);
+    }
+
+    function validateAndSubmit(files) {
+        if (!files || !files.length) return false;
+        const tooBig = [];
+        for (const f of files) {
+            if (isVideoFile(f) && f.size > MAX_VIDEO_BYTES) {
+                tooBig.push(`${f.name} (${(f.size / (1024 * 1024)).toFixed(1)}MB)`);
+            }
+        }
+        if (tooBig.length) {
+            alert(
+                'Video too large for free hosting (max 15MB each).\n\n' +
+                tooBig.join('\n') +
+                '\n\nCompress the video first, then upload again.\n' +
+                'Large videos cause Cloudflare 502 Bad Gateway.'
+            );
+            fileInput.value = '';
+            return false;
+        }
+        const label = uploadForm.querySelector('label');
+        if (label) {
+            label.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading… please wait';
+        }
+        return true;
+    }
 
     if (uploadForm && fileInput) {
         uploadForm.addEventListener('dragover', (e) => {
@@ -500,12 +534,14 @@
             uploadForm.style.opacity = '1';
             if (e.dataTransfer.files && e.dataTransfer.files.length) {
                 fileInput.files = e.dataTransfer.files;
-                uploadForm.submit();
+                if (validateAndSubmit(fileInput.files)) {
+                    uploadForm.submit();
+                }
             }
         });
 
         fileInput.addEventListener('change', () => {
-            if (fileInput.files.length > 0) {
+            if (fileInput.files.length > 0 && validateAndSubmit(fileInput.files)) {
                 uploadForm.submit();
             }
         });

@@ -9,14 +9,40 @@ from django.conf import settings
 from django.http import FileResponse, Http404, HttpResponse
 
 
+# Videos and large binaries must NOT go into Postgres MediaBlob on free tier.
+# Loading 20–50MB into RAM + writing BYTEA causes OOM / worker kill → Cloudflare 502.
+_MAX_BLOB_BYTES = 2 * 1024 * 1024  # 2MB — enough for compressed product photos
+_VIDEO_SUFFIXES = ('.mp4', '.webm', '.mov', '.m4v', '.avi', '.mkv')
+
+
 def persist_media_blob(field_file):
-    """Save ImageField/FileField bytes into MediaBlob keyed by storage path."""
+    """Save small ImageField/FileField bytes into MediaBlob keyed by storage path.
+
+    Skips videos and large files so Manage Product video uploads do not 502.
+    """
     if not field_file or not getattr(field_file, 'name', None):
         return
 
     from .models import MediaBlob
 
     name = field_file.name.replace('\\', '/').lstrip('/')
+    lower = name.lower()
+    content_type = mimetypes.guess_type(name)[0] or 'application/octet-stream'
+
+    # Never store full videos in the database (main cause of 502 on upload)
+    if content_type.startswith('video/') or lower.endswith(_VIDEO_SUFFIXES):
+        return
+    if '/videos/' in lower or lower.startswith('reels/') or '/reels/' in lower:
+        return
+
+    # Known size without reading whole file into memory first
+    try:
+        size_hint = int(getattr(field_file, 'size', 0) or 0)
+    except Exception:
+        size_hint = 0
+    if size_hint and size_hint > _MAX_BLOB_BYTES:
+        return
+
     data = None
 
     # Prefer reading the in-memory / just-uploaded file
@@ -31,9 +57,18 @@ def persist_media_blob(field_file):
     if not data:
         disk = Path(settings.MEDIA_ROOT) / name
         if disk.is_file():
+            # Avoid loading huge disk files into RAM
+            try:
+                if disk.stat().st_size > _MAX_BLOB_BYTES:
+                    return
+            except OSError:
+                pass
             data = disk.read_bytes()
 
     if not data:
+        return
+
+    if len(data) > _MAX_BLOB_BYTES:
         return
 
     content_type = mimetypes.guess_type(name)[0] or 'application/octet-stream'

@@ -1,1 +1,1 @@
-web: gunicorn flora_project.wsgi:application
+web: gunicorn flora_project.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120 --graceful-timeout 30 --keep-alive 5

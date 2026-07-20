@@ -197,9 +197,13 @@ GOOGLE_PLACES_API_KEY = os.environ.get('GOOGLE_PLACES_API_KEY', '')
 GOOGLE_PLACE_ID = os.environ.get('GOOGLE_PLACE_ID', '')
 GOOGLE_PLACE_QUERY = os.environ.get('GOOGLE_PLACE_QUERY', 'Flora Thrissur, Kerala')
 
-# Optional: Set max upload size for videos
-DATA_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
-FILE_UPLOAD_MAX_MEMORY_SIZE = 52428800  # 50MB
+# Upload limits (free Render + Cloudflare proxy)
+# Keep request max modest so huge files fail fast instead of OOM → 502.
+# Files larger than FILE_UPLOAD_MAX_MEMORY_SIZE spill to temp disk (not RAM).
+DATA_UPLOAD_MAX_MEMORY_SIZE = 20 * 1024 * 1024  # 20MB total request body
+FILE_UPLOAD_MAX_MEMORY_SIZE = 1 * 1024 * 1024   # 1MB in RAM; larger → temp file
+# Soft limit used by product / reel upload views
+MAX_VIDEO_UPLOAD_BYTES = 15 * 1024 * 1024  # 15MB per video
 
 # Behind Render's proxy
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
