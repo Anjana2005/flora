@@ -310,6 +310,46 @@ class ProductVideo(models.Model):
         _persist_image(self.video)
 
 
+class StyleReel(models.Model):
+    """
+    Homepage Style reels — uploaded and managed from the staff dashboard.
+    Stored via FileField + MediaBlob so videos survive Render redeploys.
+    """
+    title = models.CharField(max_length=200, blank=True, default='')
+    video = models.FileField(upload_to='reels/')
+    poster = models.ImageField(upload_to='reels/posters/', blank=True, null=True)
+    product = models.ForeignKey(
+        Product,
+        related_name='style_reels',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        help_text='Optional product to open when shoppers tap Shop look',
+    )
+    active = models.BooleanField(default=True)
+    sort_order = models.PositiveIntegerField(
+        default=0,
+        help_text='Lower numbers appear first in the homepage carousel',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['sort_order', '-created_at']
+        verbose_name = 'style reel'
+        verbose_name_plural = 'style reels'
+
+    def __str__(self):
+        label = self.title or (self.video.name if self.video else f'Reel #{self.pk}')
+        return f"StyleReel: {label}"
+
+    def save(self, *args, **kwargs):
+        self.poster = _maybe_compress(self.poster)
+        super().save(*args, **kwargs)
+        _persist_image(self.video)
+        _persist_image(self.poster)
+
+
 class OfferSale(models.Model):
     """Admin-managed sale offers shown on the homepage."""
     image = models.ImageField(upload_to='offers/', blank=True, null=True)

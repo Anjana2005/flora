@@ -58,5 +58,9 @@ urlpatterns = [
     path('dashboard/offers/<int:id>/', views.admin_offer_detail, name='admin_offer_detail'),
     path('dashboard/offers/<int:id>/edit/', views.admin_offer_edit, name='admin_offer_edit'),
     path('dashboard/offers/<int:id>/delete/', views.admin_offer_delete, name='admin_offer_delete'),
+    path('dashboard/reels/', views.admin_reels, name='admin_reels'),
+    path('dashboard/reels/create/', views.admin_reel_create, name='admin_reel_create'),
+    path('dashboard/reels/<int:id>/toggle/', views.admin_reel_toggle, name='admin_reel_toggle'),
+    path('dashboard/reels/<int:id>/delete/', views.admin_reel_delete, name='admin_reel_delete'),
     path('profile/', views.profile, name='profile'),
 ]

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Product, ProductImage, ProductSize, Blog, OfferSale
+from .models import Category, Product, ProductImage, ProductSize, Blog, OfferSale, StyleReel
 
 
 class ProductImageInline(admin.TabularInline):
@@ -82,6 +82,16 @@ class OfferSaleAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+
+@admin.register(StyleReel)
+class StyleReelAdmin(admin.ModelAdmin):
+    list_display = ['id', 'title', 'active', 'sort_order', 'product', 'created_at']
+    list_filter = ['active', 'created_at']
+    list_editable = ['active', 'sort_order']
+    search_fields = ['title', 'product__name']
+    readonly_fields = ['created_at', 'updated_at']
+    autocomplete_fields = ['product']
 
 
 

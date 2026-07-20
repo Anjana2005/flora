@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
-from .models import Category, Contact, OfferSale, Order, OrderItem, Product
+from .models import Category, Contact, OfferSale, Order, OrderItem, Product, StyleReel
 
 
 def resolve_google_place_id():
@@ -211,12 +211,17 @@ def home(request):
             },
         ]
 
+    style_reels = StyleReel.objects.filter(active=True).select_related('product').order_by(
+        'sort_order', '-created_at'
+    )
+
     context = {
         'featured_products': featured_products,
         'categories': categories,
         'new_arrivals': new_arrivals,
         'offer_sale': offer_sale,
         'google_reviews': google_reviews,
+        'style_reels': style_reels,
     }
     return render(request, 'shop/home.html', context)
 
@@ -1255,6 +1260,111 @@ def admin_blog_delete(request, id):
             messages.error(request, f'Error deleting blog: {str(e)}')
     
     return render(request, 'shop/admin/blog_delete_confirm.html', {'blog': blog})
+
+
+@login_required(login_url='shop:login')
+def admin_reels(request):
+    """Staff dashboard: list homepage Style reels."""
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('shop:home')
+
+    reels = StyleReel.objects.select_related('product').order_by('sort_order', '-created_at')
+    paginator = Paginator(reels, 12)
+    page_number = request.GET.get('page', 1)
+    reels = paginator.get_page(page_number)
+
+    return render(request, 'shop/admin/reels.html', {
+        'reels': reels,
+        'total_count': paginator.count,
+    })
+
+
+@login_required(login_url='shop:login')
+def admin_reel_create(request):
+    """Staff dashboard: upload a new homepage Style reel."""
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('shop:home')
+
+    products = Product.objects.filter(available=True).order_by('name')
+
+    if request.method == 'POST':
+        video = request.FILES.get('video')
+        poster = request.FILES.get('poster')
+        title = (request.POST.get('title') or '').strip()[:200]
+        active = request.POST.get('active') == 'on'
+        product_id = request.POST.get('product') or ''
+        try:
+            sort_order = int(request.POST.get('sort_order') or 0)
+        except (TypeError, ValueError):
+            sort_order = 0
+
+        if not video:
+            messages.error(request, 'A video file is required (MP4/WebM/MOV).')
+            return redirect('shop:admin_reel_create')
+
+        name = (getattr(video, 'name', '') or '').lower()
+        ctype = (getattr(video, 'content_type', '') or '').lower()
+        is_video = ctype.startswith('video/') or name.endswith(('.mp4', '.webm', '.mov', '.m4v'))
+        if not is_video:
+            messages.error(request, 'Please upload a video file (MP4, WebM, or MOV).')
+            return redirect('shop:admin_reel_create')
+
+        # Keep under free-tier friendly size (same limit as product videos)
+        max_bytes = 45 * 1024 * 1024
+        if getattr(video, 'size', 0) and video.size > max_bytes:
+            messages.error(request, 'Video is too large. Max 45MB per reel.')
+            return redirect('shop:admin_reel_create')
+
+        product = None
+        if product_id:
+            product = Product.objects.filter(id=product_id).first()
+
+        StyleReel.objects.create(
+            title=title,
+            video=video,
+            poster=poster,
+            product=product,
+            active=active,
+            sort_order=max(0, sort_order),
+        )
+        messages.success(request, 'Style reel uploaded! It will show on the homepage when Active.')
+        return redirect('shop:admin_reels')
+
+    return render(request, 'shop/admin/reel_create.html', {'products': products})
+
+
+@login_required(login_url='shop:login')
+def admin_reel_toggle(request, id):
+    """Toggle active flag for a homepage reel."""
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('shop:home')
+
+    reel = get_object_or_404(StyleReel, id=id)
+    if request.method == 'POST':
+        reel.active = not reel.active
+        reel.save(update_fields=['active', 'updated_at'])
+        state = 'shown' if reel.active else 'hidden'
+        messages.success(request, f'Reel is now {state} on the homepage.')
+    return redirect('shop:admin_reels')
+
+
+@login_required(login_url='shop:login')
+def admin_reel_delete(request, id):
+    """Delete a homepage Style reel."""
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('shop:home')
+
+    reel = get_object_or_404(StyleReel, id=id)
+    if request.method == 'POST':
+        reel.delete()
+        messages.success(request, 'Style reel deleted.')
+        return redirect('shop:admin_reels')
+
+    return render(request, 'shop/admin/reel_delete_confirm.html', {'reel': reel})
 
 
 @login_required(login_url='shop:login')

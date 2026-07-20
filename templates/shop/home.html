@@ -589,6 +589,7 @@
     </div>
 </section>
 
+{% if style_reels %}
 <section class="reels-section" aria-label="Flora style reels">
     <div class="section-head" style="padding: 0 0 0.9rem;">
         <div>
@@ -606,69 +607,18 @@
         </button>
         <div class="reels-swiper swiper">
             <div class="swiper-wrapper">
+                {% for reel in style_reels %}
                 <div class="swiper-slide">
-                    <div class="reel-card" data-video="{% static 'videos/video1.mp4' %}" tabindex="0" role="button" aria-label="Play style reel 1">
+                    <div class="reel-card" data-video="{{ reel.video.url }}" tabindex="0" role="button" aria-label="{{ reel.title|default:'Play style reel' }}">
                         <span class="reel-badge"><i class="fas fa-circle"></i> REEL</span>
-                        <video muted loop playsinline preload="metadata" autoplay poster="{% static 'images/image1.jpg' %}">
-                            <source src="{% static 'videos/video1.mp4' %}" type="video/mp4">
+                        <video muted loop playsinline preload="metadata" autoplay
+                            {% if reel.poster %}poster="{{ reel.poster.url }}"{% endif %}>
+                            <source src="{{ reel.video.url }}" type="video/mp4">
                         </video>
                         <span class="reel-play" aria-hidden="true"><i class="fas fa-play"></i></span>
                     </div>
                 </div>
-                <div class="swiper-slide">
-                    <div class="reel-card" data-video="{% static 'videos/video2.mp4' %}" tabindex="0" role="button" aria-label="Play style reel 2">
-                        <span class="reel-badge"><i class="fas fa-circle"></i> REEL</span>
-                        <video muted loop playsinline preload="metadata" autoplay poster="{% static 'images/image2.jpg' %}">
-                            <source src="{% static 'videos/video2.mp4' %}" type="video/mp4">
-                        </video>
-                        <span class="reel-play" aria-hidden="true"><i class="fas fa-play"></i></span>
-                    </div>
-                </div>
-                <div class="swiper-slide">
-                    <div class="reel-card" data-video="{% static 'videos/video3.mp4' %}" tabindex="0" role="button" aria-label="Play style reel 3">
-                        <span class="reel-badge"><i class="fas fa-circle"></i> REEL</span>
-                        <video muted loop playsinline preload="metadata" autoplay poster="{% static 'images/image3.jpg' %}">
-                            <source src="{% static 'videos/video3.mp4' %}" type="video/mp4">
-                        </video>
-                        <span class="reel-play" aria-hidden="true"><i class="fas fa-play"></i></span>
-                    </div>
-                </div>
-                <div class="swiper-slide">
-                    <div class="reel-card" data-video="{% static 'videos/video4.mp4' %}" tabindex="0" role="button" aria-label="Play style reel 4">
-                        <span class="reel-badge"><i class="fas fa-circle"></i> REEL</span>
-                        <video muted loop playsinline preload="metadata" autoplay poster="{% static 'images/image4.jpg' %}">
-                            <source src="{% static 'videos/video4.mp4' %}" type="video/mp4">
-                        </video>
-                        <span class="reel-play" aria-hidden="true"><i class="fas fa-play"></i></span>
-                    </div>
-                </div>
-                <div class="swiper-slide">
-                    <div class="reel-card" data-video="{% static 'videos/video5.mp4' %}" tabindex="0" role="button" aria-label="Play style reel 5">
-                        <span class="reel-badge"><i class="fas fa-circle"></i> REEL</span>
-                        <video muted loop playsinline preload="metadata" autoplay poster="{% static 'images/customers1.jpeg' %}">
-                            <source src="{% static 'videos/video5.mp4' %}" type="video/mp4">
-                        </video>
-                        <span class="reel-play" aria-hidden="true"><i class="fas fa-play"></i></span>
-                    </div>
-                </div>
-                <div class="swiper-slide">
-                    <div class="reel-card" data-video="{% static 'videos/video6.mp4' %}" tabindex="0" role="button" aria-label="Play style reel 6">
-                        <span class="reel-badge"><i class="fas fa-circle"></i> REEL</span>
-                        <video muted loop playsinline preload="metadata" autoplay poster="{% static 'images/customers2.jpeg' %}">
-                            <source src="{% static 'videos/video6.mp4' %}" type="video/mp4">
-                        </video>
-                        <span class="reel-play" aria-hidden="true"><i class="fas fa-play"></i></span>
-                    </div>
-                </div>
-                <div class="swiper-slide">
-                    <div class="reel-card" data-video="{% static 'videos/video7.mp4' %}" tabindex="0" role="button" aria-label="Play style reel 7">
-                        <span class="reel-badge"><i class="fas fa-circle"></i> REEL</span>
-                        <video muted loop playsinline preload="metadata" autoplay poster="{% static 'images/happycustomers.png' %}">
-                            <source src="{% static 'videos/video7.mp4' %}" type="video/mp4">
-                        </video>
-                        <span class="reel-play" aria-hidden="true"><i class="fas fa-play"></i></span>
-                    </div>
-                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
@@ -680,6 +630,7 @@
         <video id="reelLightboxVideo" controls playsinline></video>
     </div>
 </div>
+{% endif %}
 
 {% if featured_products %}
 <section class="section-wrap">
@@ -745,84 +696,86 @@
         pagination: { el: '.swiper-pagination', clickable: true }
     });
 
-    const reelsSwiper = new Swiper('.reels-swiper', {
-        slidesPerView: 'auto',
-        spaceBetween: 14,
-        freeMode: true,
-        grabCursor: true,
-        loop: false,
-        navigation: {
-            nextEl: '.reels-nav.next',
-            prevEl: '.reels-nav.prev'
-        },
-        breakpoints: {
-            0: { spaceBetween: 10 },
-            640: { spaceBetween: 12 },
-            980: { spaceBetween: 16 }
-        }
-    });
-
-    // Keep muted reels playing when visible; pause when off-screen
-    const reelVideos = document.querySelectorAll('.reel-card video');
-    if ('IntersectionObserver' in window && reelVideos.length) {
-        const reelObserver = new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-                const video = entry.target;
-                if (entry.isIntersecting) {
-                    video.play().catch(() => {});
-                } else {
-                    video.pause();
-                }
-            });
-        }, { threshold: 0.35 });
-        reelVideos.forEach((video) => reelObserver.observe(video));
-    } else {
-        reelVideos.forEach((video) => video.play().catch(() => {}));
-    }
-
-    // Lightbox for fullscreen reel playback with sound
-    const lightbox = document.getElementById('reelLightbox');
-    const lightboxVideo = document.getElementById('reelLightboxVideo');
-    const lightboxClose = document.getElementById('reelLightboxClose');
-
-    function openReelLightbox(src) {
-        if (!lightbox || !lightboxVideo || !src) return;
-        lightboxVideo.src = src;
-        lightbox.classList.add('is-open');
-        lightbox.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-        lightboxVideo.play().catch(() => {});
-    }
-
-    function closeReelLightbox() {
-        if (!lightbox || !lightboxVideo) return;
-        lightbox.classList.remove('is-open');
-        lightbox.setAttribute('aria-hidden', 'true');
-        lightboxVideo.pause();
-        lightboxVideo.removeAttribute('src');
-        lightboxVideo.load();
-        document.body.style.overflow = '';
-    }
-
-    document.querySelectorAll('.reel-card').forEach((card) => {
-        card.addEventListener('click', () => openReelLightbox(card.dataset.video));
-        card.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                openReelLightbox(card.dataset.video);
+    if (document.querySelector('.reels-swiper')) {
+        new Swiper('.reels-swiper', {
+            slidesPerView: 'auto',
+            spaceBetween: 14,
+            freeMode: true,
+            grabCursor: true,
+            loop: false,
+            navigation: {
+                nextEl: '.reels-nav.next',
+                prevEl: '.reels-nav.prev'
+            },
+            breakpoints: {
+                0: { spaceBetween: 10 },
+                640: { spaceBetween: 12 },
+                980: { spaceBetween: 16 }
             }
         });
-    });
 
-    if (lightboxClose) lightboxClose.addEventListener('click', closeReelLightbox);
-    if (lightbox) {
-        lightbox.addEventListener('click', (event) => {
-            if (event.target === lightbox) closeReelLightbox();
+        // Keep muted reels playing when visible; pause when off-screen
+        const reelVideos = document.querySelectorAll('.reel-card video');
+        if ('IntersectionObserver' in window && reelVideos.length) {
+            const reelObserver = new IntersectionObserver((entries) => {
+                entries.forEach((entry) => {
+                    const video = entry.target;
+                    if (entry.isIntersecting) {
+                        video.play().catch(() => {});
+                    } else {
+                        video.pause();
+                    }
+                });
+            }, { threshold: 0.35 });
+            reelVideos.forEach((video) => reelObserver.observe(video));
+        } else {
+            reelVideos.forEach((video) => video.play().catch(() => {}));
+        }
+
+        // Lightbox for fullscreen reel playback with sound
+        const lightbox = document.getElementById('reelLightbox');
+        const lightboxVideo = document.getElementById('reelLightboxVideo');
+        const lightboxClose = document.getElementById('reelLightboxClose');
+
+        function openReelLightbox(src) {
+            if (!lightbox || !lightboxVideo || !src) return;
+            lightboxVideo.src = src;
+            lightbox.classList.add('is-open');
+            lightbox.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            lightboxVideo.play().catch(() => {});
+        }
+
+        function closeReelLightbox() {
+            if (!lightbox || !lightboxVideo) return;
+            lightbox.classList.remove('is-open');
+            lightbox.setAttribute('aria-hidden', 'true');
+            lightboxVideo.pause();
+            lightboxVideo.removeAttribute('src');
+            lightboxVideo.load();
+            document.body.style.overflow = '';
+        }
+
+        document.querySelectorAll('.reel-card').forEach((card) => {
+            card.addEventListener('click', () => openReelLightbox(card.dataset.video));
+            card.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    openReelLightbox(card.dataset.video);
+                }
+            });
+        });
+
+        if (lightboxClose) lightboxClose.addEventListener('click', closeReelLightbox);
+        if (lightbox) {
+            lightbox.addEventListener('click', (event) => {
+                if (event.target === lightbox) closeReelLightbox();
+            });
+        }
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeReelLightbox();
         });
     }
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') closeReelLightbox();
-    });
 
     const offerBanner = document.getElementById('offerBanner');
     if (offerBanner) {
